@@ -1,75 +1,40 @@
-# React + TypeScript + Vite
+# Emmanex client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React, TypeScript, and Vite frontend for Emmanex.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Run the backend on port `5000`, then start the client:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+The client defaults to the same-origin `/api` base path. Vite proxies `/api`
+requests to `http://localhost:5000`; set `VITE_DEV_API_TARGET` in the client
+environment to use a different local backend URL.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+For a deployed frontend, set `VITE_API_BASE_URL` to the backend API base URL,
+including `/api` (for example, `https://api.example.com/api`). This value is
+public client configuration and must not contain secrets.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Cookie and CSRF configuration
 
-```
+Authentication uses the backend's HttpOnly session cookie and an in-memory
+CSRF token obtained from the authenticated `/api/auth/csrf` response. The
+frontend does not read the session cookie or persist either token in browser
+storage. API requests include credentials.
+
+Configure the backend `CORS_ORIGINS` with the exact frontend origin. For a
+cross-site frontend/API deployment, use HTTPS and configure
+`SESSION_COOKIE_SAME_SITE=none` and `SESSION_COOKIE_SECURE=true`. Same-site
+deployments can use the backend's stricter `lax` default. Do not use wildcard
+CORS origins with credentialed requests.
+
+## Current feature boundary
+
+Registration, sign-in, sign-out, session restoration, and the protected account
+screen are wired to the backend. Product discovery, order history, and checkout
+remain unavailable until their backend services are implemented. Authentication
+also requires the backend sessions migration to be applied; the frontend does
+not simulate authentication when the API or database is unavailable.
