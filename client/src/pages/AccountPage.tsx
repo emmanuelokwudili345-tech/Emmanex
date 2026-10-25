@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { SiteHeader } from '../components/SiteHeader'
 import { useAuth } from '../auth/AuthProvider'
@@ -27,7 +28,7 @@ export function AccountPage() {
             <span className="card-kicker">COMING SOON</span>
             <h2>Your orders</h2>
             <p>Order history will appear here once the store’s product and order services are available.</p>
-            <Link className="text-link" to="/">Back to discover <span aria-hidden="true">→</span></Link>
+            <Link className="text-link" to="/">Back to discover <ArrowRight size={14} aria-hidden="true" /></Link>
           </section>
         </div>
       </main>
@@ -41,13 +42,13 @@ export function CheckoutPage() {
     <>
       <SiteHeader />
       <main className="state-screen checkout-placeholder">
-        <div className="state-icon">✳</div>
+        <div className="state-icon" aria-hidden="true"><Sparkles size={22} /></div>
         <p className="eyebrow">Coming soon</p>
         <h1>Checkout is not open yet</h1>
         <p>We’ll enable checkout when product, order, and payment services are ready.</p>
         <Link className="button button-dark" to="/">Back to Emmanex</Link>
       </main>
-      <footer className="minimal-footer"><Link to="/">← Back to Emmanex</Link><span>© {new Date().getFullYear()} Emmanex</span></footer>
+      <footer className="minimal-footer"><Link to="/"><ArrowLeft size={14} aria-hidden="true" /> Back to Emmanex</Link><span>© {new Date().getFullYear()} Emmanex</span></footer>
     </>
   )
 }

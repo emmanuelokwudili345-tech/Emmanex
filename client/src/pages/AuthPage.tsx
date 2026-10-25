@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { SiteHeader } from '../components/SiteHeader'
@@ -65,7 +66,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           <div className="auth-aside-art" aria-hidden="true">
             <div className="aside-ring" />
             <div className="aside-shape">E</div>
-            <span className="aside-star">✳</span>
+            <span className="aside-star" aria-hidden="true"><Sparkles size={38} /></span>
             <span className="aside-dot" />
           </div>
           <p className="eyebrow">Welcome to Emmanex</p>
@@ -144,7 +145,7 @@ export function AuthPage({ mode }: AuthPageProps) {
               </label>
               <button className="button button-dark submit-button" type="submit" disabled={submitting}>
                 {submitting ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
-                {!submitting && <span aria-hidden="true">→</span>}
+                {!submitting && <ArrowRight size={16} aria-hidden="true" />}
               </button>
               <p className="form-switch">
                 {isRegister ? 'Already have an account?' : 'New to Emmanex?'}{' '}
@@ -159,7 +160,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           </div>
         </section>
       </main>
-      <footer className="minimal-footer"><Link to="/">← Back to Emmanex</Link><span>© {new Date().getFullYear()} Emmanex</span></footer>
+      <footer className="minimal-footer"><Link to="/"><ArrowLeft size={14} aria-hidden="true" /> Back to Emmanex</Link><span>© {new Date().getFullYear()} Emmanex</span></footer>
     </>
   )
 }

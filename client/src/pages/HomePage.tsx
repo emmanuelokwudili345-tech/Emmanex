@@ -6,6 +6,8 @@ import {
   Heart,
   RotateCcw,
   Search,
+  Sparkles,
+  X,
   ShieldCheck,
   ShoppingBag,
   Star,
@@ -105,7 +107,7 @@ export function HomePage() {
           <span>Good finds. Good prices. Good everyday.</span>
           <span className="announcement-extra">
             Thoughtfully picked, just for you
-            <span aria-hidden="true">✳</span>
+            <Sparkles size={13} aria-hidden="true" />
           </span>
         </div>
 
@@ -151,7 +153,7 @@ export function HomePage() {
               <div className="proof-avatars" aria-hidden="true">
                 <span>E</span>
                 <span>+</span>
-                <span>♡</span>
+                <Heart size={13} aria-hidden="true" />
               </div>
 
               <p>
@@ -171,7 +173,7 @@ export function HomePage() {
 
             <div className="hero-image-label">
               <span className="hero-label-icon" aria-hidden="true">
-                ✳
+                <Sparkles size={17} />
               </span>
               <span>
                 <strong>Everyday, elevated.</strong>
@@ -442,7 +444,7 @@ export function HomePage() {
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
             <span className="editorial-stamp">
-              THE EMMANEX EDIT <span aria-hidden="true">✳</span>
+              THE EMMANEX EDIT <Sparkles size={10} aria-hidden="true" />
             </span>
           </div>
         </section>
@@ -550,7 +552,7 @@ export function HomePage() {
             © {new Date().getFullYear()} Emmanex. All rights reserved.
           </span>
           <span>
-            Made for everyday living <span aria-hidden="true">✳</span>
+            Made for everyday living <Sparkles size={10} aria-hidden="true" />
           </span>
           <span>Prices shown in Nigerian naira (₦)</span>
         </div>
@@ -565,7 +567,7 @@ export function HomePage() {
             onClick={() => setNotification('')}
             aria-label="Dismiss notification"
           >
-            ×
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
       )}

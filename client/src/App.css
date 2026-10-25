@@ -428,7 +428,7 @@
   white-space: nowrap;
 }
 
-.text-link span {
+.text-link span, .text-link svg {
   margin-left: 8px;
   color: var(--terra);
 }
@@ -805,6 +805,9 @@
 }
 
 .minimal-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--ink-soft);
   text-decoration: none;
 }
@@ -1011,7 +1014,7 @@
   font-weight: 400;
 }
 
-.announcement-extra span {
+.announcement-extra span, .announcement-extra svg {
   margin-left: 5px;
   color: #d9a58b;
 }
@@ -1827,7 +1830,7 @@
   letter-spacing: 1.5px;
 }
 
-.editorial-stamp span {
+.editorial-stamp span, .editorial-stamp svg {
   margin-left: 7px;
   color: var(--terra-dark);
 }
