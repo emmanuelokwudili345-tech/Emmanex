@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { SiteHeader } from '../components/SiteHeader'
-import { useAuth } from '../auth/AuthProvider'
+import { useAuth } from '../auth/useAuth';
 
 export function AccountPage() {
   const { user } = useAuth()

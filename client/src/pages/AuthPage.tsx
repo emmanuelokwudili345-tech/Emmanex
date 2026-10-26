@@ -1,16 +1,18 @@
-import { useState, type FormEvent } from 'react'
+import { useAuth } from '../auth/useAuth'
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../auth/AuthProvider'
 import { SiteHeader } from '../components/SiteHeader'
+import { useToast } from '../components/useToast'
+import { useState, type FormEvent } from 'react'
 
-interface AuthPageProps {
+export interface AuthPageProps {
   mode: 'login' | 'register'
 }
 
 export function AuthPage({ mode }: AuthPageProps) {
   const isRegister = mode === 'register'
   const { status, login, register } = useAuth()
+  const { showToast } = useToast()
   const location = useLocation()
   const navigate = useNavigate()
   const [firstName, setFirstName] = useState('')
@@ -52,11 +54,20 @@ export function AuthPage({ mode }: AuthPageProps) {
         : '/account'
       navigate(destination, { replace: true })
     } catch (cause) {
-      setFormError(cause instanceof Error ? cause.message : 'Please try again.')
+      const message =
+        cause instanceof Error ? cause.message : 'Please try again.'
+
+      setFormError(message)
+
+      showToast({
+        type: 'error',
+        title: isRegister ? 'Registration failed' : 'Sign-in failed',
+        message,
+      })
     } finally {
-      setSubmitting(false)
-    }
-  }
+          setSubmitting(false)
+        }
+      }
 
   return (
     <>

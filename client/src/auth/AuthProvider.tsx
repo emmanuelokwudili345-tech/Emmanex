@@ -1,127 +1,143 @@
+
 import {
-  createContext,
   useCallback,
-  useContext,
-  useEffect,
   useMemo,
-  useRef,
-  useState,
   type ReactNode,
 } from 'react'
-import { ApiError, authApi, type User } from './api'
+import { neonAuthClient } from './neonAuthClient'
+import {
+  AuthContext,
+  type AuthContextValue,
+  type AuthStatus,
+  type User,
+} from './useAuth'
 
-type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error'
-
-interface AuthContextValue {
-  user: User | null
-  status: AuthStatus
-  error: string | null
-  login: (input: { email: string; password: string }) => Promise<void>
-  register: (input: {
-    firstName: string
-    lastName: string
-    email: string
-    password: string
-  }) => Promise<void>
-  logout: () => Promise<void>
-  refreshSession: () => Promise<void>
+interface AuthProviderProps {
+  children: ReactNode
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
+function getUserName(name: string | null | undefined) {
+  const parts = name?.trim().split(/\s+/).filter(Boolean) ?? []
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const restoredRef = useRef(false)
-  const [user, setUser] = useState<User | null>(null)
-  const [status, setStatus] = useState<AuthStatus>('loading')
-  const [error, setError] = useState<string | null>(null)
+  return {
+    firstName: parts[0] ?? '',
+    lastName: parts.slice(1).join(' '),
+  }
+}
 
-  const refreshSession = useCallback(async () => {
-    setStatus('loading')
-    setError(null)
-    try {
-      const currentUser = await authApi.getCurrentUser()
-      await authApi.refreshCsrfToken()
-      setUser(currentUser)
-      setStatus('authenticated')
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 401) {
-        setUser(null)
-        setStatus('unauthenticated')
-        return
+export function AuthProvider({ children }: AuthProviderProps) {
+  const {
+    data: session,
+    isPending,
+    error: sessionError,
+    refetch,
+  } = neonAuthClient.useSession()
+  
+  const user = useMemo<User | null>(() => {
+    const sessionUser = session?.user
+
+    if (!sessionUser) {
+      return null
+    }
+
+    return {
+      id: sessionUser.id,
+      email: sessionUser.email,
+      ...getUserName(sessionUser.name),
+      role: 'customer',
+    }
+  }, [session?.user])
+
+  const status: AuthStatus = isPending
+    ? 'loading'
+    : sessionError
+      ? 'error'
+      : user
+        ? 'authenticated'
+        : 'unauthenticated'
+
+  const login: AuthContextValue['login'] = useCallback(
+    async ({ email, password }) => {
+      const result = await neonAuthClient.signIn.email({
+        email,
+        password,
+      })
+
+      if (result.error) {
+        throw new Error(result.error.message, {
+          cause: result.error,
+        })
       }
-      setError(cause instanceof Error ? cause.message : 'Unable to restore your session.')
-      setStatus('error')
-    }
-  }, [])
 
-  useEffect(() => {
-    if (restoredRef.current) {
-      return
-    }
-    restoredRef.current = true
-    void refreshSession()
-  }, [refreshSession])
-
-  const login = useCallback(async (input: { email: string; password: string }) => {
-    setError(null)
-    try {
-      const signedInUser = await authApi.login(input)
-      setUser(signedInUser)
-      setStatus('authenticated')
-    } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Sign in failed.'
-      setError(message)
-      throw new Error(message)
-    }
-  }, [])
-
-  const register = useCallback(async (input: {
-    firstName: string
-    lastName: string
-    email: string
-    password: string
-  }) => {
-    setError(null)
-    try {
-      const registeredUser = await authApi.register(input)
-      setUser(registeredUser)
-      setStatus('authenticated')
-    } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Account creation failed.'
-      setError(message)
-      throw new Error(message)
-    }
-  }, [])
-
-  const logout = useCallback(async () => {
-    setError(null)
-    try {
-      await authApi.logout()
-      setUser(null)
-      setStatus('unauthenticated')
-    } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Sign out failed.'
-      if (cause instanceof ApiError && cause.status === 401) {
-        setUser(null)
-        setStatus('unauthenticated')
-      }
-      setError(message)
-      throw new Error(message)
-    }
-  }, [])
-
-  const value = useMemo(
-    () => ({ user, status, error, login, register, logout, refreshSession }),
-    [user, status, error, login, register, logout, refreshSession],
+      await refetch()
+    },
+    [refetch],
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
+  const register: AuthContextValue['register'] = useCallback(
+    async ({ firstName, lastName, email, password }) => {
+      const name = `${firstName} ${lastName}`.trim()
 
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used inside AuthProvider.')
-  }
-  return context
+      const result = await neonAuthClient.signUp.email({
+        email,
+        password,
+        name,
+      })
+
+      if (result.error) {
+        throw new Error(result.error.message, {
+          cause: result.error,
+        })
+      }
+
+      await refetch()
+    },
+    [refetch],
+  )
+
+  const logout: AuthContextValue['logout'] = useCallback(
+    async () => {
+      const result = await neonAuthClient.signOut()
+
+      if (result.error) {
+        throw new Error(result.error.message, {
+          cause: result.error,
+        })
+      }
+
+      await refetch()
+    },
+    [refetch],
+  )
+
+  const refreshSession = useCallback(async () => {
+    await refetch()
+  }, [refetch])
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      status,
+      error: sessionError?.message ?? null,
+      login,
+      register,
+      logout,
+      refreshSession,
+    }),
+    [
+      user,
+      status,
+      sessionError,
+      login,
+      register,
+      logout,
+      refreshSession,
+    ],
+  )
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }

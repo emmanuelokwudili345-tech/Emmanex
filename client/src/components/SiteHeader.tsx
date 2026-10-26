@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LogOut, ShoppingBag, UserRound } from 'lucide-react'
-import { useAuth } from '../auth/AuthProvider'
+import { useAuth } from '../auth/useAuth'
 
 type SiteHeaderProps = {
   cartCount?: number
