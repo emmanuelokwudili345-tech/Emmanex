@@ -32,11 +32,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     error: sessionError,
     refetch,
   } = neonAuthClient.useSession()
-  
+
   const user = useMemo<User | null>(() => {
     const sessionUser = session?.user
 
-    if (!sessionUser) {
+    if (!sessionUser || sessionUser.emailVerified !== true) {
       return null
     }
 
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login: AuthContextValue['login'] = useCallback(
     async ({ email, password }) => {
       const result = await neonAuthClient.signIn.email({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       })
 
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const name = `${firstName} ${lastName}`.trim()
 
       const result = await neonAuthClient.signUp.email({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         name,
       })
@@ -94,6 +94,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     },
     [refetch],
   )
+
+  const verifyEmailCode: AuthContextValue['verifyEmailCode'] =
+    useCallback(async ({ email, otp }) => {
+      const result = await neonAuthClient.emailOtp.verifyEmail({
+        email: email.trim().toLowerCase(),
+        otp: otp.trim(),
+      })
+
+      if (result.error) {
+        throw new Error(result.error.message, {
+          cause: result.error,
+        })
+      }
+
+      await refetch()
+    }, [refetch])
+
+  const resendVerificationCode: AuthContextValue['resendVerificationCode'] =
+    useCallback(async (email) => {
+      const result =
+        await neonAuthClient.emailOtp.sendVerificationOtp({
+          email: email.trim().toLowerCase(),
+          type: 'email-verification',
+        })
+
+      if (result.error) {
+        throw new Error(result.error.message, {
+          cause: result.error,
+        })
+      }
+    }, [])
 
   const logout: AuthContextValue['logout'] = useCallback(
     async () => {
@@ -121,6 +152,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       error: sessionError?.message ?? null,
       login,
       register,
+      verifyEmailCode,
+      resendVerificationCode,
       logout,
       refreshSession,
     }),
@@ -130,6 +163,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       sessionError,
       login,
       register,
+      verifyEmailCode,
+      resendVerificationCode,
       logout,
       refreshSession,
     ],

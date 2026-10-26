@@ -1,6 +1,11 @@
+/* ==========================================================================
+   Site header (shared)
+   ========================================================================== */
+
 .site-header {
-  position: relative;
-  z-index: 2;
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   min-height: 82px;
   align-items: center;
@@ -23,7 +28,8 @@
   text-decoration: none;
 }
 
-.wordmark-mark, .callout-mark {
+.wordmark-mark,
+.callout-mark {
   display: grid;
   width: 33px;
   height: 33px;
@@ -36,13 +42,15 @@
   font-style: italic;
 }
 
-.header-nav, .header-actions {
+.header-nav,
+.header-actions {
   display: flex;
   align-items: center;
   gap: 28px;
 }
 
-.header-nav a, .header-signin {
+.header-nav a,
+.header-signin {
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 600;
@@ -50,7 +58,9 @@
   transition: color 160ms ease;
 }
 
-.header-nav a:hover, .header-signin:hover, .text-link:hover {
+.header-nav a:hover,
+.header-signin:hover,
+.text-link:hover {
   color: var(--terra-dark);
 }
 
@@ -81,6 +91,10 @@
   font-size: 13px;
   box-shadow: var(--shadow);
 }
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
 
 .button {
   display: inline-flex;
@@ -137,6 +151,10 @@
   padding-inline: 15px;
 }
 
+/* ==========================================================================
+   Hero (landing)
+   ========================================================================== */
+
 .hero-section {
   display: grid;
   min-height: 590px;
@@ -170,7 +188,10 @@
   background: var(--terra);
 }
 
-.hero-copy h1, .auth-aside h1, .account-page h1, .state-screen h1 {
+.hero-copy h1,
+.auth-aside h1,
+.account-page h1,
+.state-screen h1 {
   margin: 25px 0 22px;
   color: var(--ink);
   font-family: var(--serif);
@@ -348,6 +369,10 @@
   font-style: italic;
 }
 
+/* ==========================================================================
+   Value strip & collection callout
+   ========================================================================== */
+
 .value-strip {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -379,7 +404,8 @@
   font-weight: 600;
 }
 
-.value-strip p, .callout-detail {
+.value-strip p,
+.callout-detail {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.7;
@@ -428,12 +454,18 @@
   white-space: nowrap;
 }
 
-.text-link span, .text-link svg {
+.text-link span,
+.text-link svg {
   margin-left: 8px;
   color: var(--terra);
 }
 
-.site-footer, .minimal-footer {
+/* ==========================================================================
+   Footers (minimal)
+   ========================================================================== */
+
+.site-footer,
+.minimal-footer {
   display: flex;
   min-height: 82px;
   align-items: center;
@@ -455,6 +487,10 @@
   height: 27px;
   font-size: 15px;
 }
+
+/* ==========================================================================
+   Auth pages
+   ========================================================================== */
 
 .auth-layout {
   display: grid;
@@ -584,7 +620,8 @@
   font-size: 13px;
 }
 
-.auth-form, .auth-form label {
+.auth-form,
+.auth-form label {
   display: flex;
   flex-direction: column;
 }
@@ -669,6 +706,10 @@
   line-height: 1.5;
 }
 
+/* ==========================================================================
+   Account page
+   ========================================================================== */
+
 .account-page {
   min-height: calc(100vh - 164px);
   padding: 82px clamp(24px, 10vw, 145px);
@@ -750,6 +791,10 @@
   line-height: 1.7;
 }
 
+/* ==========================================================================
+   State screens & utilities
+   ========================================================================== */
+
 .state-screen {
   display: flex;
   min-height: calc(100vh - 164px);
@@ -828,6 +873,10 @@
   }
 }
 
+/* ==========================================================================
+   Responsive: shared, auth & account
+   ========================================================================== */
+
 @media (max-width: 900px) {
   .hero-section {
     min-height: 520px;
@@ -835,18 +884,23 @@
     gap: 34px;
     padding-inline: 6vw;
   }
+
   .hero-art {
     min-height: 325px;
   }
+
   .collection-callout {
     grid-template-columns: auto 1fr 1fr;
   }
+
   .collection-callout .text-link {
     grid-column: 2 / -1;
   }
+
   .auth-layout {
     grid-template-columns: 0.8fr 1fr;
   }
+
   .auth-aside {
     padding-inline: 35px;
   }
@@ -858,61 +912,78 @@
     gap: 12px;
     padding-inline: 18px;
   }
+
   .wordmark {
     gap: 7px;
     font-size: 20px;
   }
+
   .wordmark-mark {
     width: 29px;
     height: 29px;
   }
+
   .header-nav {
     display: none;
   }
+
   .header-actions {
     gap: 10px;
   }
+
   .header-greeting {
     display: none;
   }
+
   .button-small {
     min-height: 36px;
     padding-inline: 11px;
     font-size: 11px;
   }
+
   .hero-section {
     grid-template-columns: 1fr;
     gap: 35px;
     padding: 57px 23px 48px;
   }
+
   .hero-copy h1 {
     font-size: 58px;
     letter-spacing: -3px;
   }
+
   .hero-note {
     margin-top: 30px;
   }
+
   .hero-art {
     min-height: 300px;
     margin-inline: 12px;
   }
+
   .value-strip {
     grid-template-columns: 1fr;
     gap: 20px;
     padding: 25px 26px;
   }
+
   .collection-callout {
     grid-template-columns: auto 1fr;
     gap: 19px;
     padding: 48px 25px;
   }
-  .callout-detail, .collection-callout .text-link {
+
+  .callout-detail,
+  .collection-callout .text-link {
     grid-column: 2;
   }
+
   .collection-callout h2 {
     font-size: 27px;
   }
-  .site-footer, .minimal-footer {
+
+  .site-footer,
+  .minimal-footer {
     min-height: 70px;
     flex-wrap: wrap;
     justify-content: center;
@@ -920,17 +991,21 @@
     padding: 17px 20px;
     text-align: center;
   }
+
   .site-footer > span:nth-child(2) {
     display: none;
   }
+
   .auth-layout {
     display: block;
   }
+
   .auth-aside {
     min-height: 270px;
     justify-content: flex-end;
     padding: 42px 26px 30px;
   }
+
   .aside-shape {
     top: 10%;
     left: auto;
@@ -939,62 +1014,85 @@
     height: 136px;
     font-size: 49px;
   }
+
   .aside-ring {
     top: -28%;
     left: 40%;
     width: 65%;
     height: 135%;
   }
+
   .aside-star {
     top: 13%;
     right: 11%;
     font-size: 25px;
   }
+
   .aside-dot {
     right: 35%;
     bottom: 19%;
     width: 25px;
     height: 25px;
   }
+
   .auth-aside h1 {
     max-width: 330px;
     margin: 8px 0;
     font-size: 34px;
   }
+
   .auth-aside > p:not(.eyebrow) {
     max-width: 330px;
     font-size: 11px;
   }
+
   .aside-footnote {
     display: none;
   }
+
   .auth-panel {
     padding: 43px 24px 52px;
   }
+
   .auth-panel h2 {
     font-size: 31px;
   }
+
   .form-row {
     gap: 10px;
   }
+
   .account-page {
     min-height: calc(100vh - 138px);
     padding: 56px 22px;
   }
+
   .account-grid {
     grid-template-columns: 1fr;
     margin-top: 30px;
   }
+
   .account-card {
     min-height: auto;
     padding: 23px;
   }
+
   .state-screen h1 {
     font-size: 35px;
   }
 }
 
-/* Emmanex storefront homepage */ .announcement-bar {
+/* ==========================================================================
+   Storefront: header shell & announcement bar
+   ========================================================================== */
+
+.store-header-shell {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.announcement-bar {
   display: flex;
   min-height: 34px;
   align-items: center;
@@ -1014,10 +1112,15 @@
   font-weight: 400;
 }
 
-.announcement-extra span, .announcement-extra svg {
+.announcement-extra span,
+.announcement-extra svg {
   margin-left: 5px;
   color: #d9a58b;
 }
+
+/* ==========================================================================
+   Storefront: site header
+   ========================================================================== */
 
 .store-site-header {
   min-height: 78px;
@@ -1051,7 +1154,8 @@
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
-.header-icon-link:hover, .header-icon-link:focus-visible {
+.header-icon-link:hover,
+.header-icon-link:focus-visible {
   border-color: var(--line);
   background: #f7f4ee;
   color: var(--terra-dark);
@@ -1090,6 +1194,10 @@
   color: #fff;
   font-size: 9px;
 }
+
+/* ==========================================================================
+   Storefront: home & hero
+   ========================================================================== */
 
 .store-home {
   overflow: hidden;
@@ -1170,7 +1278,8 @@
   padding-inline: 21px;
 }
 
-.store-primary-button svg, .button-light svg {
+.store-primary-button svg,
+.button-light svg {
   flex-shrink: 0;
 }
 
@@ -1289,7 +1398,8 @@
   font-size: 17px;
 }
 
-.hero-image-label strong, .hero-image-label small {
+.hero-image-label strong,
+.hero-image-label small {
   display: block;
 }
 
@@ -1367,6 +1477,10 @@
   padding: 86px clamp(24px, 8.2vw, 118px);
 }
 
+/* ==========================================================================
+   Storefront: categories
+   ========================================================================== */
+
 .categories-section {
   background: #fffefa;
 }
@@ -1379,7 +1493,9 @@
   margin-bottom: 31px;
 }
 
-.section-heading h2, .newsletter-copy h2, .final-join-banner h2 {
+.section-heading h2,
+.newsletter-copy h2,
+.final-join-banner h2 {
   margin: 9px 0 0;
   color: var(--ink);
   font-family: var(--serif);
@@ -1436,7 +1552,8 @@
   transition: transform 400ms ease;
 }
 
-.category-card:hover .category-image-wrap img, .category-card-active .category-image-wrap img {
+.category-card:hover .category-image-wrap img,
+.category-card-active .category-image-wrap img {
   transform: scale(1.045);
 }
 
@@ -1471,12 +1588,14 @@
   transition: background 160ms ease, color 160ms ease;
 }
 
-.category-card:hover .category-arrow, .category-card-active .category-arrow {
+.category-card:hover .category-arrow,
+.category-card-active .category-arrow {
   background: var(--terra);
   color: white;
 }
 
-.category-card-title, .category-card-description {
+.category-card-title,
+.category-card-description {
   display: block;
 }
 
@@ -1494,6 +1613,10 @@
   color: var(--muted);
   font-size: 10px;
 }
+
+/* ==========================================================================
+   Storefront: products
+   ========================================================================== */
 
 .products-section {
   background: #f7f4ee;
@@ -1563,7 +1686,8 @@
   transition: all 160ms ease;
 }
 
-.filter-chip:hover, .filter-chip.active {
+.filter-chip:hover,
+.filter-chip.active {
   border-color: var(--ink);
   background: var(--ink);
   color: #fffefa;
@@ -1651,7 +1775,8 @@
   transition: opacity 180ms ease, transform 180ms ease, background 180ms ease, color 180ms ease;
 }
 
-.product-card:hover .quick-add, .quick-add:focus-visible {
+.product-card:hover .quick-add,
+.quick-add:focus-visible {
   opacity: 1;
   transform: translateY(0);
 }
@@ -1755,6 +1880,10 @@
   font-size: 11px;
 }
 
+/* ==========================================================================
+   Storefront: editorial banner
+   ========================================================================== */
+
 .editorial-banner {
   display: grid;
   min-height: 420px;
@@ -1830,10 +1959,15 @@
   letter-spacing: 1.5px;
 }
 
-.editorial-stamp span, .editorial-stamp svg {
+.editorial-stamp span,
+.editorial-stamp svg {
   margin-left: 7px;
   color: var(--terra-dark);
 }
+
+/* ==========================================================================
+   Storefront: newsletter
+   ========================================================================== */
 
 .newsletter-section {
   display: grid;
@@ -1946,6 +2080,10 @@
   font-size: 10px;
 }
 
+/* ==========================================================================
+   Storefront: final banner
+   ========================================================================== */
+
 .final-join-banner {
   display: flex;
   align-items: center;
@@ -1972,6 +2110,10 @@
   flex-shrink: 0;
   gap: 16px;
 }
+
+/* ==========================================================================
+   Storefront: footer
+   ========================================================================== */
 
 .store-footer {
   padding: 37px clamp(24px, 8.2vw, 118px) 0;
@@ -2039,6 +2181,10 @@
   color: #d9a58b;
 }
 
+/* ==========================================================================
+   Storefront: toast (legacy)
+   ========================================================================== */
+
 .store-toast {
   position: fixed;
   z-index: 20;
@@ -2077,35 +2223,48 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
+/* ==========================================================================
+   Responsive: storefront
+   ========================================================================== */
+
 @media (max-width: 1000px) {
   .store-hero {
     gap: 40px;
     padding-inline: 5vw;
   }
+
   .store-hero-copy h1 {
     font-size: clamp(49px, 6vw, 65px);
   }
+
   .category-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
   .category-image-wrap {
     aspect-ratio: .95;
   }
+
   .product-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
   .newsletter-section {
     grid-template-columns: auto 1fr;
   }
-  .newsletter-form, .newsletter-success {
+
+  .newsletter-form,
+  .newsletter-success {
     grid-column: 2;
   }
+
   .store-section {
     padding-block: 68px;
   }
@@ -2116,129 +2275,162 @@
     min-height: 31px;
     font-size: 9px;
   }
+
   .announcement-extra {
     display: none;
   }
+
   .store-site-header {
     min-height: 68px;
     padding-inline: 17px;
   }
+
   .store-header-nav {
     display: none;
   }
+
   .store-header-actions {
     gap: 6px;
   }
+
   .header-icon-link {
     width: 34px;
     height: 34px;
   }
+
   .header-bag {
     gap: 4px;
     padding-left: 10px;
     font-size: 10px;
   }
+
   .store-hero {
     grid-template-columns: 1fr;
     gap: 32px;
     padding: 48px 23px 43px;
   }
+
   .store-hero-copy {
     padding: 0;
   }
+
   .store-hero-copy h1 {
     margin: 19px 0 16px;
     font-size: clamp(53px, 12vw, 67px);
     letter-spacing: -3.4px;
   }
+
   .store-hero-description {
     max-width: 390px;
     font-size: 13px;
   }
+
   .store-hero-actions {
     gap: 17px;
     margin-top: 23px;
   }
+
   .store-primary-button {
     min-height: 45px;
     gap: 12px;
     padding-inline: 15px;
     font-size: 11px;
   }
+
   .store-hero-proof {
     margin-top: 28px;
   }
+
   .store-hero-visual {
     height: min(94vw, 390px);
     margin-inline: 10px 14px;
   }
+
   .hero-image-label {
     right: -13px;
     bottom: 27px;
     padding: 10px 12px 10px 10px;
   }
+
   .hero-label-icon {
     width: 29px;
     height: 29px;
   }
+
   .hero-image-label strong {
     font-size: 12px;
   }
+
   .hero-image-label small {
     font-size: 8px;
   }
+
   .store-benefits {
     grid-template-columns: 1fr;
     gap: 18px;
     padding: 23px 26px;
   }
+
   .store-benefits article {
     justify-content: flex-start;
   }
+
   .benefit-icon {
     width: 35px;
     height: 35px;
   }
+
   .store-section {
     padding: 53px 21px;
   }
+
   .section-heading {
     align-items: flex-start;
     flex-direction: column;
     gap: 12px;
     margin-bottom: 23px;
   }
+
   .section-heading h2 {
     font-size: 31px;
     letter-spacing: -1px;
   }
+
   .section-side-note {
     display: none;
   }
+
   .category-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 23px 13px;
   }
+
   .category-image-wrap {
     aspect-ratio: .88;
   }
+
   .category-card-title {
     margin-top: 11px;
     font-size: 14px;
   }
+
   .category-card-description {
     font-size: 9px;
   }
+
   .products-heading {
     gap: 18px;
   }
+
   .product-tools {
     width: 100%;
   }
+
   .product-search {
     width: 100%;
     flex: 1;
   }
+
   .product-filter-row {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -2246,28 +2438,34 @@
     padding: 2px 21px 8px 0;
     scrollbar-width: thin;
   }
+
   .filter-chip {
     flex-shrink: 0;
   }
+
   .product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 25px 12px;
   }
+
   .product-image-wrap {
     aspect-ratio: .78;
   }
+
   .product-label {
     top: 8px;
     left: 8px;
     padding: 6px 7px;
     font-size: 7px;
   }
+
   .product-wishlist {
     top: 7px;
     right: 7px;
     width: 29px;
     height: 29px;
   }
+
   .quick-add {
     right: 7px;
     bottom: 7px;
@@ -2278,91 +2476,117 @@
     opacity: 1;
     transform: none;
   }
+
   .product-card-details {
     padding-top: 10px;
   }
+
   .product-category-name {
     font-size: 8px;
   }
+
   .product-card h3 {
     margin: 5px 0 7px;
     font-size: 14px;
   }
+
   .product-rating {
     gap: 3px;
     font-size: 9px;
   }
+
   .product-rating strong {
     font-size: 9px;
   }
+
   .product-prices {
     gap: 6px;
     margin-top: 8px;
   }
+
   .product-prices strong {
     font-size: 11px;
   }
+
   .product-prices del {
     font-size: 9px;
   }
+
   .editorial-banner {
     grid-template-columns: 1fr;
   }
-  .editorial-image, .editorial-image img {
+
+  .editorial-image,
+  .editorial-image img {
     min-height: 260px;
     height: 260px;
   }
+
   .editorial-copy {
     min-height: 340px;
     padding: 42px 27px 54px;
   }
+
   .editorial-copy h2 {
     font-size: 43px;
   }
+
   .newsletter-section {
     grid-template-columns: auto 1fr;
     gap: 17px;
     padding: 42px 24px;
   }
+
   .newsletter-mark {
     width: 41px;
     height: 41px;
     font-size: 23px;
   }
+
   .newsletter-copy h2 {
     font-size: 27px;
     letter-spacing: -.8px;
   }
+
   .newsletter-copy > p:last-child {
     font-size: 10px;
   }
-  .newsletter-form, .newsletter-success {
+
+  .newsletter-form,
+  .newsletter-success {
     grid-column: 1 / -1;
   }
+
   .final-join-banner {
     align-items: flex-start;
     flex-direction: column;
     gap: 21px;
     padding: 39px 24px;
   }
+
   .final-join-banner h2 {
     font-size: 31px;
   }
+
   .store-footer {
     padding: 30px 23px 0;
   }
+
   .footer-main {
     grid-template-columns: 1fr 1fr;
     gap: 22px 16px;
   }
+
   .footer-main > p {
     font-size: 13px;
   }
+
   .footer-links {
     grid-column: 1 / -1;
     justify-content: flex-start;
     gap: 15px 19px;
   }
+
   .footer-bottom {
     align-items: flex-start;
     flex-direction: column;
@@ -2371,9 +2595,11 @@
     padding-block: 15px;
     font-size: 8px;
   }
+
   .footer-bottom > span:last-child {
     text-align: left;
   }
+
   .store-toast {
     right: 12px;
     bottom: 12px;
@@ -2387,9 +2613,9 @@
   }
 }
 
-
-
-/* Toast notifications */
+/* ==========================================================================
+   Toast notifications
+   ========================================================================== */
 
 .toast-container {
   position: fixed;

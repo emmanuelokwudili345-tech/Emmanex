@@ -1,9 +1,15 @@
-import { useAuth } from '../auth/useAuth'
+
+import { useState, type FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
+import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
 import { useToast } from '../components/useToast'
-import { useState, type FormEvent } from 'react'
 
 export interface AuthPageProps {
   mode: 'login' | 'register'
@@ -15,6 +21,7 @@ export function AuthPage({ mode }: AuthPageProps) {
   const { showToast } = useToast()
   const location = useLocation()
   const navigate = useNavigate()
+
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -25,6 +32,7 @@ export function AuthPage({ mode }: AuthPageProps) {
   if (status === 'authenticated') {
     return <Navigate to="/account" replace />
   }
+
   if (status === 'loading') {
     return (
       <>
@@ -43,55 +51,105 @@ export function AuthPage({ mode }: AuthPageProps) {
     setSubmitting(true)
 
     try {
+      const normalizedEmail = email.trim().toLowerCase()
+
       if (isRegister) {
-        await register({ firstName, lastName, email, password })
-      } else {
-        await login({ email, password })
+        await register({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: normalizedEmail,
+          password,
+        })
+
+        navigate('/verify-email', {
+          replace: true,
+          state: { email: normalizedEmail },
+        })
+
+        return
       }
-      const from = (location.state as { from?: unknown } | null)?.from
-      const destination = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')
-        ? from
-        : '/account'
+
+      await login({
+        email: normalizedEmail,
+        password,
+      })
+
+      const from = (
+        location.state as { from?: unknown } | null
+      )?.from
+
+      const destination =
+        typeof from === 'string' &&
+        from.startsWith('/') &&
+        !from.startsWith('//')
+          ? from
+          : '/account'
+
       navigate(destination, { replace: true })
     } catch (cause) {
       const message =
-        cause instanceof Error ? cause.message : 'Please try again.'
+        cause instanceof Error
+          ? cause.message
+          : 'Please try again.'
 
       setFormError(message)
 
       showToast({
         type: 'error',
-        title: isRegister ? 'Registration failed' : 'Sign-in failed',
+        title: isRegister
+          ? 'Registration failed'
+          : 'Sign-in failed',
         message,
       })
     } finally {
-          setSubmitting(false)
-        }
-      }
+      setSubmitting(false)
+    }
+  }
 
   return (
     <>
       <SiteHeader />
+
       <main className="auth-layout">
         <aside className="auth-aside">
           <div className="auth-aside-art" aria-hidden="true">
             <div className="aside-ring" />
             <div className="aside-shape">E</div>
-            <span className="aside-star" aria-hidden="true"><Sparkles size={38} /></span>
+            <span className="aside-star" aria-hidden="true">
+              <Sparkles size={38} />
+            </span>
             <span className="aside-dot" />
           </div>
+
           <p className="eyebrow">Welcome to Emmanex</p>
-          <h1>{isRegister ? 'A good thing starts here.' : 'Good to have you back.'}</h1>
-          <p>{isRegister
-            ? 'Create your account and get ready for a more thoughtful kind of everyday shopping.'
-            : 'Sign in to pick up where you left off and keep your Emmanex experience close.'}</p>
-          <span className="aside-footnote">GOOD THINGS, CHOSEN WELL.</span>
+
+          <h1>
+            {isRegister
+              ? 'A good thing starts here.'
+              : 'Good to have you back.'}
+          </h1>
+
+          <p>
+            {isRegister
+              ? 'Create your account and get ready for a more thoughtful kind of everyday shopping.'
+              : 'Sign in to pick up where you left off and keep your Emmanex experience close.'}
+          </p>
+
+          <span className="aside-footnote">
+            GOOD THINGS, CHOSEN WELL.
+          </span>
         </aside>
 
         <section className="auth-panel">
           <div className="auth-panel-inner">
-            <p className="eyebrow">{isRegister ? 'Get started' : 'Your account'}</p>
-            <h2>{isRegister ? 'Create an account' : 'Sign in'}</h2>
+            <p className="eyebrow">
+              {isRegister ? 'Get started' : 'Your account'}
+            </p>
+
+            <h2>
+              {isRegister ? 'Create an account' : 'Sign in'}
+            </h2>
+
             <p className="form-intro">
               {isRegister
                 ? 'It only takes a moment to make your place.'
@@ -100,10 +158,16 @@ export function AuthPage({ mode }: AuthPageProps) {
 
             {status === 'error' && (
               <div className="form-alert" role="alert">
-                We couldn’t verify your saved session. You can still try signing in.
+                We couldn’t verify your saved session. You can still try
+                signing in.
               </div>
             )}
-            {formError && <div className="form-alert" role="alert">{formError}</div>}
+
+            {formError && (
+              <div className="form-alert" role="alert">
+                {formError}
+              </div>
+            )}
 
             <form className="auth-form" onSubmit={handleSubmit}>
               {isRegister && (
@@ -115,9 +179,12 @@ export function AuthPage({ mode }: AuthPageProps) {
                       maxLength={100}
                       required
                       value={firstName}
-                      onChange={(event) => setFirstName(event.target.value)}
+                      onChange={(event) =>
+                        setFirstName(event.target.value)
+                      }
                     />
                   </label>
+
                   <label>
                     Last name
                     <input
@@ -125,11 +192,14 @@ export function AuthPage({ mode }: AuthPageProps) {
                       maxLength={100}
                       required
                       value={lastName}
-                      onChange={(event) => setLastName(event.target.value)}
+                      onChange={(event) =>
+                        setLastName(event.target.value)
+                      }
                     />
                   </label>
                 </div>
               )}
+
               <label>
                 Email address
                 <input
@@ -141,10 +211,13 @@ export function AuthPage({ mode }: AuthPageProps) {
                   onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
+
               <label>
                 Password
                 <input
-                  autoComplete={isRegister ? 'new-password' : 'current-password'}
+                  autoComplete={
+                    isRegister ? 'new-password' : 'current-password'
+                  }
                   type="password"
                   minLength={isRegister ? 12 : 1}
                   maxLength={128}
@@ -152,26 +225,55 @@ export function AuthPage({ mode }: AuthPageProps) {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
-                {isRegister && <span className="field-hint">Use at least 12 characters.</span>}
+
+                {isRegister && (
+                  <span className="field-hint">
+                    Use at least 12 characters.
+                  </span>
+                )}
               </label>
-              <button className="button button-dark submit-button" type="submit" disabled={submitting}>
-                {submitting ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
-                {!submitting && <ArrowRight size={16} aria-hidden="true" />}
+
+              <button
+                className="button button-dark submit-button"
+                type="submit"
+                disabled={submitting}
+              >
+                {submitting
+                  ? 'Please wait…'
+                  : isRegister
+                    ? 'Create account'
+                    : 'Sign in'}
+
+                {!submitting && (
+                  <ArrowRight size={16} aria-hidden="true" />
+                )}
               </button>
+
               <p className="form-switch">
-                {isRegister ? 'Already have an account?' : 'New to Emmanex?'}{' '}
+                {isRegister
+                  ? 'Already have an account?'
+                  : 'New to Emmanex?'}{' '}
                 <Link to={isRegister ? '/login' : '/register'}>
                   {isRegister ? 'Sign in' : 'Create an account'}
                 </Link>
               </p>
             </form>
+
             <p className="privacy-note">
-              Your account is protected with secure sign-in and private sessions.
+              Your account is protected with secure sign-in and private
+              sessions.
             </p>
           </div>
         </section>
       </main>
-      <footer className="minimal-footer"><Link to="/"><ArrowLeft size={14} aria-hidden="true" /> Back to Emmanex</Link><span>© {new Date().getFullYear()} Emmanex</span></footer>
+
+      <footer className="minimal-footer">
+        <Link to="/">
+          <ArrowLeft size={14} aria-hidden="true" />
+          Back to Emmanex
+        </Link>
+        <span>© {new Date().getFullYear()} Emmanex</span>
+      </footer>
     </>
   )
 }

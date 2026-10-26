@@ -29,6 +29,11 @@ export interface AuthContextValue {
     email: string
     password: string
   }) => Promise<void>
+  verifyEmailCode: (input: {
+    email: string
+    otp: string
+  }) => Promise<void>
+  resendVerificationCode: (email: string) => Promise<void>
   logout: () => Promise<void>
   refreshSession: () => Promise<void>
 }
