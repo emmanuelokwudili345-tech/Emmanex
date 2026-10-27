@@ -1,4 +1,3 @@
-
 import { useState, type FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, MailCheck } from 'lucide-react'
 import {
@@ -7,6 +6,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
+import { getAuthErrorMessage } from '../auth/authErrors'
 import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
 import { useToast } from '../components/useToast'
@@ -74,10 +74,7 @@ export function VerifyEmailPage() {
         },
       })
     } catch (cause) {
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : 'We could not verify that code. Please try again.'
+      const message = getAuthErrorMessage(cause, 'verify')
 
       setFormError(message)
 
@@ -96,7 +93,7 @@ export function VerifyEmailPage() {
     setResending(true)
 
     try {
-      await resendVerificationCode(email)
+      await resendVerificationCode(email.trim().toLowerCase())
 
       showToast({
         type: 'success',
@@ -104,10 +101,7 @@ export function VerifyEmailPage() {
         message: 'Check your inbox for a new verification code.',
       })
     } catch (cause) {
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : 'We could not resend the code. Please try again.'
+      const message = getAuthErrorMessage(cause, 'resend')
 
       setFormError(message)
 
@@ -154,7 +148,7 @@ export function VerifyEmailPage() {
             <h2>Check your inbox</h2>
 
             <p className="form-intro">
-              Enter the six-digit code sent to your email address.
+              If you just created an account, enter the six-digit verification code sent to your email. If you already have an Emmanex account, sign in instead.
             </p>
 
             {formError && (
@@ -189,7 +183,9 @@ export function VerifyEmailPage() {
                   required
                   value={otp}
                   onChange={(event) =>
-                    setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))
+                    setOtp(
+                      event.target.value.replace(/\D/g, '').slice(0, 6),
+                    )
                   }
                 />
               </label>
@@ -215,7 +211,7 @@ export function VerifyEmailPage() {
               </button>
 
               <p className="form-switch">
-                Already verified? <Link to="/login">Sign in</Link>
+                Already have an account? <Link to="/login">Sign in</Link>
               </p>
             </form>
 

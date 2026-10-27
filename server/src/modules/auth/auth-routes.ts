@@ -9,6 +9,7 @@ import {
   requireAuthenticatedMutation,
 } from "./auth-middleware.js";
 import { requireTrustedOrigin } from "./csrf.js";
+import { requireNeonAuth } from "./neon-auth-middleware.js";
 import type { AuthOperations } from "./auth-types.js";
 import { parseLoginInput, parseRegistrationInput } from "./auth-validation.js";
 
@@ -65,6 +66,7 @@ export function createAuthRouter(
   const authenticate = requireAuth(auth, config.cookieName);
   const authenticatedMutation = requireAuthenticatedMutation(auth, config);
   const authRateLimit = createAuthRateLimit();
+  const authenticateWithNeon = requireNeonAuth(config);
 
   router.post("/register", authRateLimit, trustedOrigin, async (req, res) => {
     const session = await auth.register(parseRegistrationInput(req.body));
@@ -104,6 +106,18 @@ export function createAuthRouter(
     const csrfToken = await auth.rotateCsrfToken(req.authSession.tokenHash);
     res.cookie(config.csrfCookieName, csrfToken, csrfCookieOptions(config));
     res.json(successResponse("CSRF token issued.", { csrfToken }));
+  });
+
+  router.get("/neon/me", authenticateWithNeon, (req, res) => {
+    if (!req.neonAuthUser) {
+      throw new HttpError(401, "Authentication is required.");
+    }
+
+    res.json(
+      successResponse("Neon Auth identity verified.", {
+        user: req.neonAuthUser,
+      }),
+    );
   });
 
   router.get("/me", authenticate, (req, res) => {

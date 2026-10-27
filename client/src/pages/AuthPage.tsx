@@ -7,6 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
+import { getAuthErrorMessage } from '../auth/authErrors'
 import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
 import { useToast } from '../components/useToast'
@@ -87,10 +88,10 @@ export function AuthPage({ mode }: AuthPageProps) {
 
       navigate(destination, { replace: true })
     } catch (cause) {
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : 'Please try again.'
+      const message = getAuthErrorMessage(
+        cause,
+        isRegister ? 'register' : 'login',
+      )
 
       setFormError(message)
 

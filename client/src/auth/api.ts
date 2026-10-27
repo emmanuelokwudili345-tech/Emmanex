@@ -1,3 +1,5 @@
+import { getNeonJWTToken } from './neonAuthClient'
+
 export interface User {
   id: string
   firstName: string
@@ -27,7 +29,9 @@ export class ApiError extends Error {
   }
 }
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
+const apiBaseUrl = (
+  import.meta.env.VITE_API_BASE_URL || '/api'
+).replace(/\/$/, '')
 
 let csrfToken: string | null = null
 
@@ -37,19 +41,34 @@ async function request<T>(
     method?: string
     body?: unknown
     csrf?: boolean
+    authenticated?: boolean
   } = {},
 ): Promise<T> {
   const headers = new Headers()
+
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json')
   }
+
+  const token = await getNeonJWTToken()
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  } else if (options.authenticated) {
+    throw new ApiError('Please sign in to continue.', 401)
+  }
+
   if (options.csrf) {
     if (!csrfToken) {
       await refreshCsrfToken()
     }
+
     if (!csrfToken) {
-      throw new Error('Your session needs to be refreshed. Please sign in again.')
+      throw new Error(
+        'Your session needs to be refreshed. Please sign in again.',
+      )
     }
+
     headers.set('X-CSRF-Token', csrfToken)
   }
 
@@ -57,18 +76,29 @@ async function request<T>(
     method: options.method ?? 'GET',
     credentials: 'include',
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body:
+      options.body === undefined
+        ? undefined
+        : JSON.stringify(options.body),
   })
 
   if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as ApiErrorEnvelope | null
+    const error = (await response.json().catch(() => null)) as
+      | ApiErrorEnvelope
+      | null
+
     if (response.status === 401) {
       csrfToken = null
     }
-    throw new ApiError(error?.message || 'The request could not be completed.', response.status)
+
+    throw new ApiError(
+      error?.message || 'The request could not be completed.',
+      response.status,
+    )
   }
 
   const envelope = (await response.json()) as ApiEnvelope<T>
+
   return envelope.data
 }
 
@@ -84,7 +114,10 @@ async function refreshCsrfToken(): Promise<void> {
 
 export const authApi = {
   async getCurrentUser(): Promise<User> {
-    const result = await request<{ user: User }>('/auth/me')
+    const result = await request<{ user: User }>('/auth/me', {
+      authenticated: true,
+    })
+
     return result.user
   },
 
@@ -100,18 +133,25 @@ export const authApi = {
       method: 'POST',
       body: input,
     })
+
     csrfToken = null
     await refreshCsrfToken()
+
     return result.user
   },
 
-  async login(input: { email: string; password: string }): Promise<User> {
+  async login(input: {
+    email: string
+    password: string
+  }): Promise<User> {
     const result = await request<{ user: User }>('/auth/login', {
       method: 'POST',
       body: input,
     })
+
     csrfToken = null
     await refreshCsrfToken()
+
     return result.user
   },
 
@@ -120,6 +160,7 @@ export const authApi = {
       method: 'POST',
       csrf: true,
     })
+
     csrfToken = null
   },
 }

@@ -1,4 +1,4 @@
-
+import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { useLayoutEffect } from 'react'
 import {
   BrowserRouter,
@@ -44,6 +44,10 @@ function AppRoutes() {
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="/verify-email"
+          element={<VerifyEmailPage />}
+        />
       </Routes>
     </>
   )

@@ -16,6 +16,8 @@ export interface AuthConfig {
   cookieSecure: boolean;
   cookieSameSite: CookieSameSite;
   sessionDurationMs: number;
+  neonAuthBaseUrl?: string;
+  neonAuthJwksUrl?: string;
 }
 
 export function getPort(value = process.env.PORT): number {
@@ -99,6 +101,36 @@ export function getAuthConfig(
     throw new Error("SESSION_COOKIE_SECURE must be true when SameSite is none.");
   }
 
+  const neonAuthBaseUrl = env.NEON_AUTH_BASE_URL?.trim();
+  const neonAuthJwksUrl = env.NEON_AUTH_JWKS_URL?.trim();
+
+  if (Boolean(neonAuthBaseUrl) !== Boolean(neonAuthJwksUrl)) {
+    throw new Error(
+      "NEON_AUTH_BASE_URL and NEON_AUTH_JWKS_URL must be configured together.",
+    );
+  }
+
+  if (neonAuthBaseUrl && neonAuthJwksUrl) {
+    for (const [name, value] of [
+      ["NEON_AUTH_BASE_URL", neonAuthBaseUrl],
+      ["NEON_AUTH_JWKS_URL", neonAuthJwksUrl],
+    ] as const) {
+      let parsed: URL;
+      try {
+        parsed = new URL(value);
+      } catch {
+        throw new Error(`${name} must be a valid URL.`);
+      }
+
+      if (
+        parsed.protocol !== "https:" &&
+        !(parsed.protocol === "http:" && parsed.hostname === "localhost")
+      ) {
+        throw new Error(`${name} must use HTTPS (localhost may use HTTP).`);
+      }
+    }
+  }
+
   const cookieName = env.SESSION_COOKIE_NAME?.trim() || "emmanex_session";
   const csrfCookieName = env.CSRF_COOKIE_NAME?.trim() || "emmanex_csrf";
   if (
@@ -116,5 +148,8 @@ export function getAuthConfig(
     cookieSecure,
     cookieSameSite: sameSiteValue,
     sessionDurationMs: 7 * 24 * 60 * 60 * 1000,
+    ...(neonAuthBaseUrl && neonAuthJwksUrl
+      ? { neonAuthBaseUrl, neonAuthJwksUrl }
+      : {}),
   };
 }

@@ -1,10 +1,10 @@
-
 import {
   useCallback,
   useMemo,
   type ReactNode,
 } from 'react'
 import { neonAuthClient } from './neonAuthClient'
+import { getAuthErrorMessage } from './authErrors'
 import {
   AuthContext,
   type AuthContextValue,
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
 
       if (result.error) {
-        throw new Error(result.error.message, {
+        throw new Error(getAuthErrorMessage(result.error, 'login'), {
           cause: result.error,
         })
       }
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
 
       if (result.error) {
-        throw new Error(result.error.message, {
+        throw new Error(getAuthErrorMessage(result.error, 'register'), {
           cause: result.error,
         })
       }
@@ -96,20 +96,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 
   const verifyEmailCode: AuthContextValue['verifyEmailCode'] =
-    useCallback(async ({ email, otp }) => {
-      const result = await neonAuthClient.emailOtp.verifyEmail({
-        email: email.trim().toLowerCase(),
-        otp: otp.trim(),
-      })
-
-      if (result.error) {
-        throw new Error(result.error.message, {
-          cause: result.error,
+    useCallback(
+      async ({ email, otp }) => {
+        const result = await neonAuthClient.emailOtp.verifyEmail({
+          email: email.trim().toLowerCase(),
+          otp: otp.trim(),
         })
-      }
 
-      await refetch()
-    }, [refetch])
+        if (result.error) {
+          throw new Error(getAuthErrorMessage(result.error, 'verify'), {
+            cause: result.error,
+          })
+        }
+
+        await refetch()
+      },
+      [refetch],
+    )
 
   const resendVerificationCode: AuthContextValue['resendVerificationCode'] =
     useCallback(async (email) => {
@@ -120,7 +123,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
 
       if (result.error) {
-        throw new Error(result.error.message, {
+        throw new Error(getAuthErrorMessage(result.error, 'resend'), {
           cause: result.error,
         })
       }
@@ -131,7 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const result = await neonAuthClient.signOut()
 
       if (result.error) {
-        throw new Error(result.error.message, {
+        throw new Error(getAuthErrorMessage(result.error, 'logout'), {
           cause: result.error,
         })
       }
