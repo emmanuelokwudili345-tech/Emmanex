@@ -1,3 +1,4 @@
+
 import { getNeonJWTToken } from './neonAuthClient'
 
 export interface User {
@@ -19,6 +20,15 @@ interface ApiErrorEnvelope {
   message?: string
 }
 
+interface ProfileResponse {
+  user?: User
+  id?: string
+  firstName?: string
+  lastName?: string
+  email?: string
+  role?: string
+}
+
 export class ApiError extends Error {
   readonly status: number
 
@@ -33,134 +43,57 @@ const apiBaseUrl = (
   import.meta.env.VITE_API_BASE_URL || '/api'
 ).replace(/\/$/, '')
 
-let csrfToken: string | null = null
+export const authApi = {
+  async syncProfile(): Promise<User> {
+    const token = await getNeonJWTToken()
 
-async function request<T>(
-  path: string,
-  options: {
-    method?: string
-    body?: unknown
-    csrf?: boolean
-    authenticated?: boolean
-  } = {},
-): Promise<T> {
-  const headers = new Headers()
-
-  if (options.body !== undefined) {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  const token = await getNeonJWTToken()
-
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
-  } else if (options.authenticated) {
-    throw new ApiError('Please sign in to continue.', 401)
-  }
-
-  if (options.csrf) {
-    if (!csrfToken) {
-      await refreshCsrfToken()
-    }
-
-    if (!csrfToken) {
-      throw new Error(
-        'Your session needs to be refreshed. Please sign in again.',
+    if (!token) {
+      throw new ApiError(
+        'Your authentication session has expired. Please sign in again.',
+        401,
       )
     }
 
-    headers.set('X-CSRF-Token', csrfToken)
-  }
+    const response = await fetch(`${apiBaseUrl}/auth/profile`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: options.method ?? 'GET',
-    credentials: 'include',
-    headers,
-    body:
-      options.body === undefined
-        ? undefined
-        : JSON.stringify(options.body),
-  })
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as
+        | ApiErrorEnvelope
+        | null
 
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as
-      | ApiErrorEnvelope
-      | null
-
-    if (response.status === 401) {
-      csrfToken = null
+      throw new ApiError(
+        error?.message || 'We could not prepare your customer profile.',
+        response.status,
+      )
     }
 
-    throw new ApiError(
-      error?.message || 'The request could not be completed.',
-      response.status,
-    )
-  }
+    const envelope = (await response.json()) as ApiEnvelope<ProfileResponse>
+    const profile = envelope.data.user ?? envelope.data
 
-  const envelope = (await response.json()) as ApiEnvelope<T>
+    if (
+      typeof profile.id !== 'string' ||
+      typeof profile.firstName !== 'string' ||
+      typeof profile.lastName !== 'string' ||
+      typeof profile.email !== 'string' ||
+      typeof profile.role !== 'string'
+    ) {
+      throw new Error(
+        'The server returned an invalid customer profile. Please try again.',
+      )
+    }
 
-  return envelope.data
-}
-
-async function refreshCsrfToken(): Promise<void> {
-  try {
-    const result = await request<{ csrfToken: string }>('/auth/csrf')
-    csrfToken = result.csrfToken
-  } catch (error) {
-    csrfToken = null
-    throw error
-  }
-}
-
-export const authApi = {
-  async getCurrentUser(): Promise<User> {
-    const result = await request<{ user: User }>('/auth/me', {
-      authenticated: true,
-    })
-
-    return result.user
-  },
-
-  refreshCsrfToken,
-
-  async register(input: {
-    firstName: string
-    lastName: string
-    email: string
-    password: string
-  }): Promise<User> {
-    const result = await request<{ user: User }>('/auth/register', {
-      method: 'POST',
-      body: input,
-    })
-
-    csrfToken = null
-    await refreshCsrfToken()
-
-    return result.user
-  },
-
-  async login(input: {
-    email: string
-    password: string
-  }): Promise<User> {
-    const result = await request<{ user: User }>('/auth/login', {
-      method: 'POST',
-      body: input,
-    })
-
-    csrfToken = null
-    await refreshCsrfToken()
-
-    return result.user
-  },
-
-  async logout(): Promise<void> {
-    await request<{ signedOut: boolean }>('/auth/logout', {
-      method: 'POST',
-      csrf: true,
-    })
-
-    csrfToken = null
+    return {
+      id: profile.id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      email: profile.email,
+      role: profile.role,
+    }
   },
 }

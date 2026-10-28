@@ -1,8 +1,12 @@
+
 import {
   useCallback,
+  useEffect,
   useMemo,
+  useState,
   type ReactNode,
 } from 'react'
+import { authApi } from './api'
 import { neonAuthClient } from './neonAuthClient'
 import { getAuthErrorMessage } from './authErrors'
 import {
@@ -16,13 +20,33 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-function getUserName(name: string | null | undefined) {
-  const parts = name?.trim().split(/\s+/).filter(Boolean) ?? []
+interface ProfileSyncState {
+  userId: string
+  user: User | null
+  error: string | null
+}
 
-  return {
-    firstName: parts[0] ?? '',
-    lastName: parts.slice(1).join(' '),
+const profileSyncRequests = new Map<string, Promise<User>>()
+
+function syncProfileOnce(userId: string): Promise<User> {
+  const existingRequest = profileSyncRequests.get(userId)
+
+  if (existingRequest) {
+    return existingRequest
   }
+
+  const request = authApi.syncProfile()
+  profileSyncRequests.set(userId, request)
+
+  void request.finally(() => {
+    if (profileSyncRequests.get(userId) === request) {
+      profileSyncRequests.delete(userId)
+    }
+  }).catch(() => {
+    // The original request handles the error.
+  })
+
+  return request
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
@@ -33,28 +57,88 @@ export function AuthProvider({ children }: AuthProviderProps) {
     refetch,
   } = neonAuthClient.useSession()
 
-  const user = useMemo<User | null>(() => {
-    const sessionUser = session?.user
+  const sessionUser = (
+    session as
+      | { user?: {
+          id: string
+          email: string
+          name?: string | null
+          emailVerified?: boolean
+        } }
+      | null
+      | undefined
+  )?.user
+  const neonUserId =
+    sessionUser?.emailVerified === true ? sessionUser.id : null
 
-    if (!sessionUser || sessionUser.emailVerified !== true) {
+  const [profileSync, setProfileSync] =
+    useState<ProfileSyncState | null>(null)
+
+  useEffect(() => {
+    if (!neonUserId) {
+      return
+    }
+
+    if (profileSync?.userId === neonUserId) {
+      return
+    }
+
+    let active = true
+
+    void syncProfileOnce(neonUserId)
+      .then((profile) => {
+        if (active) {
+          setProfileSync({
+            userId: neonUserId,
+            user: profile,
+            error: null,
+          })
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setProfileSync({
+            userId: neonUserId,
+            user: null,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'We could not prepare your customer profile.',
+          })
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [neonUserId, profileSync])
+
+  const user = useMemo<User | null>(() => {
+    if (!neonUserId || profileSync?.userId !== neonUserId) {
       return null
     }
 
-    return {
-      id: sessionUser.id,
-      email: sessionUser.email,
-      ...getUserName(sessionUser.name),
-      role: 'customer',
-    }
-  }, [session?.user])
+    return profileSync.user
+  }, [neonUserId, profileSync])
+
+  const syncError =
+    neonUserId && profileSync?.userId === neonUserId
+      ? profileSync.error
+      : null
 
   const status: AuthStatus = isPending
     ? 'loading'
     : sessionError
       ? 'error'
-      : user
-        ? 'authenticated'
-        : 'unauthenticated'
+      : !neonUserId
+        ? 'unauthenticated'
+        : profileSync?.userId !== neonUserId
+          ? 'loading'
+          : profileSync.error
+            ? 'error'
+            : user
+              ? 'authenticated'
+              : 'error'
 
   const login: AuthContextValue['login'] = useCallback(
     async ({ email, password }) => {
@@ -69,6 +153,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
       }
 
+      setProfileSync(null)
       await refetch()
     },
     [refetch],
@@ -90,6 +175,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
       }
 
+      setProfileSync(null)
       await refetch()
     },
     [refetch],
@@ -109,6 +195,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           })
         }
 
+        setProfileSync(null)
         await refetch()
       },
       [refetch],
@@ -131,7 +218,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout: AuthContextValue['logout'] = useCallback(
     async () => {
-      const result = await neonAuthClient.signOut()
+      const result = await neonAuthClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            setProfileSync(null)
+          },
+        },
+      })
 
       if (result.error) {
         throw new Error(getAuthErrorMessage(result.error, 'logout'), {
@@ -139,12 +232,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
       }
 
+      setProfileSync(null)
       await refetch()
     },
     [refetch],
   )
 
   const refreshSession = useCallback(async () => {
+    setProfileSync(null)
     await refetch()
   }, [refetch])
 
@@ -152,7 +247,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     () => ({
       user,
       status,
-      error: sessionError?.message ?? null,
+      error: sessionError?.message ?? syncError,
       login,
       register,
       verifyEmailCode,
@@ -164,6 +259,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user,
       status,
       sessionError,
+      syncError,
       login,
       register,
       verifyEmailCode,

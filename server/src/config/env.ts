@@ -7,15 +7,8 @@ dotenv.config({ path: envPath });
 
 const DEFAULT_PORT = 5000;
 
-export type CookieSameSite = "lax" | "strict" | "none";
-
 export interface AuthConfig {
   corsOrigins: string[];
-  cookieName: string;
-  csrfCookieName: string;
-  cookieSecure: boolean;
-  cookieSameSite: CookieSameSite;
-  sessionDurationMs: number;
   neonAuthBaseUrl?: string;
   neonAuthJwksUrl?: string;
 }
@@ -26,6 +19,7 @@ export function getPort(value = process.env.PORT): number {
   }
 
   const port = Number(value);
+
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error("PORT must be an integer between 1 and 65535.");
   }
@@ -45,6 +39,7 @@ export function getAuthConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): AuthConfig {
   const isProduction = env.NODE_ENV === "production";
+
   const origins = env.CORS_ORIGINS?.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
@@ -53,53 +48,27 @@ export function getAuthConfig(
     throw new Error("CORS_ORIGINS must be configured in production.");
   }
 
-  const corsOrigins = origins?.map((origin) => {
-    let parsed: URL;
-    try {
-      parsed = new URL(origin);
-    } catch {
-      throw new Error("CORS_ORIGINS must contain valid origin URLs.");
-    }
+  const corsOrigins =
+    origins?.map((origin) => {
+      let parsed: URL;
 
-    if (
-      parsed.origin !== origin ||
-      (parsed.protocol !== "https:" && parsed.hostname !== "localhost")
-    ) {
-      throw new Error(
-        "CORS_ORIGINS must contain HTTPS origins (localhost may use HTTP).",
-      );
-    }
+      try {
+        parsed = new URL(origin);
+      } catch {
+        throw new Error("CORS_ORIGINS must contain valid origin URLs.");
+      }
 
-    return parsed.origin;
-  }) ?? ["http://localhost:5173"];
+      if (
+        parsed.origin !== origin ||
+        (parsed.protocol !== "https:" && parsed.hostname !== "localhost")
+      ) {
+        throw new Error(
+          "CORS_ORIGINS must contain HTTPS origins (localhost may use HTTP).",
+        );
+      }
 
-  const sameSiteValue = env.SESSION_COOKIE_SAME_SITE?.toLowerCase() ?? "lax";
-  if (
-    sameSiteValue !== "lax" &&
-    sameSiteValue !== "strict" &&
-    sameSiteValue !== "none"
-  ) {
-    throw new Error(
-      "SESSION_COOKIE_SAME_SITE must be lax, strict, or none.",
-    );
-  }
-
-  const secureValue = env.SESSION_COOKIE_SECURE;
-  const cookieSecure =
-    secureValue === undefined ? isProduction : secureValue === "true";
-  if (
-    secureValue !== undefined &&
-    secureValue !== "true" &&
-    secureValue !== "false"
-  ) {
-    throw new Error("SESSION_COOKIE_SECURE must be true or false.");
-  }
-  if (isProduction && !cookieSecure) {
-    throw new Error("SESSION_COOKIE_SECURE must be true in production.");
-  }
-  if (sameSiteValue === "none" && !cookieSecure) {
-    throw new Error("SESSION_COOKIE_SECURE must be true when SameSite is none.");
-  }
+      return parsed.origin;
+    }) ?? ["http://localhost:5173"];
 
   const neonAuthBaseUrl = env.NEON_AUTH_BASE_URL?.trim();
   const neonAuthJwksUrl = env.NEON_AUTH_JWKS_URL?.trim();
@@ -116,6 +85,7 @@ export function getAuthConfig(
       ["NEON_AUTH_JWKS_URL", neonAuthJwksUrl],
     ] as const) {
       let parsed: URL;
+
       try {
         parsed = new URL(value);
       } catch {
@@ -126,28 +96,15 @@ export function getAuthConfig(
         parsed.protocol !== "https:" &&
         !(parsed.protocol === "http:" && parsed.hostname === "localhost")
       ) {
-        throw new Error(`${name} must use HTTPS (localhost may use HTTP).`);
+        throw new Error(
+          `${name} must use HTTPS (localhost may use HTTP).`,
+        );
       }
     }
   }
 
-  const cookieName = env.SESSION_COOKIE_NAME?.trim() || "emmanex_session";
-  const csrfCookieName = env.CSRF_COOKIE_NAME?.trim() || "emmanex_csrf";
-  if (
-    !/^[A-Za-z0-9_-]+$/.test(cookieName) ||
-    !/^[A-Za-z0-9_-]+$/.test(csrfCookieName) ||
-    cookieName === csrfCookieName
-  ) {
-    throw new Error("Cookie names must be distinct and contain only letters, numbers, underscores, or hyphens.");
-  }
-
   return {
     corsOrigins,
-    cookieName,
-    csrfCookieName,
-    cookieSecure,
-    cookieSameSite: sameSiteValue,
-    sessionDurationMs: 7 * 24 * 60 * 60 * 1000,
     ...(neonAuthBaseUrl && neonAuthJwksUrl
       ? { neonAuthBaseUrl, neonAuthJwksUrl }
       : {}),

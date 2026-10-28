@@ -29,6 +29,20 @@
       "when": 1792603920000,
       "tag": "0003_auth_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793134399642,
+      "tag": "0004_robust_azazel",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793143000668,
+      "tag": "0005_link_neon_auth_identity",
+      "breakpoints": true
     }
   ]
 }
