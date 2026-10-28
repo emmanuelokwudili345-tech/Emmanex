@@ -10,6 +10,7 @@ import {
   notFoundHandler,
 } from "./middleware/error-handler.js";
 import { createProfileRouter } from "./modules/auth/profile-routes.js";
+import { createCatalogRouter } from "./modules/catalog/catalog-routes.js";
 
 export function createApp(
   checkDatabase: () => Promise<void> = checkDatabaseConnection,
@@ -53,6 +54,7 @@ export function createApp(
   });
 
   app.use("/api/auth", createProfileRouter());
+  app.use("/api", createCatalogRouter());
 
   app.use(notFoundHandler);
   app.use(errorHandler);

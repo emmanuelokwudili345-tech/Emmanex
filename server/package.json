@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "tsx --test src/app.test.ts src/modules/auth/neon-auth-middleware.test.ts src/modules/auth/profile-routes.test.ts",
+    "test": "tsx --test src/app.test.ts src/modules/auth/neon-auth-middleware.test.ts src/modules/auth/profile-routes.test.ts src/modules/catalog/catalog-routes.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
