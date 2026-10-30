@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
   ArrowRight,
   ArrowUpRight,
@@ -10,17 +10,41 @@ import {
   X,
   ShieldCheck,
   ShoppingBag,
-  Star,
   Truck,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
+import { formatNaira } from '../data/mockStore'
 import {
-  formatNaira,
-  mockCategories,
-  mockProducts,
-} from '../data/mockStore'
+  catalogApi,
+  type CatalogCategory,
+  type CatalogProduct,
+} from '../services/catalogApi'
+
+const fallbackProductImage =
+  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&q=85'
+
+const categoryImageByKeyword: Array<[string, string]> = [
+  ['fashion', 'photo-1483985988355-763728e1935b'],
+  ['accessor', 'photo-1483985988355-763728e1935b'],
+  ['electronic', 'photo-1498049794561-7780e7231661'],
+  ['tech', 'photo-1498049794561-7780e7231661'],
+  ['beauty', 'photo-1608248543803-ba4f8c70ae0b'],
+  ['self-care', 'photo-1608248543803-ba4f8c70ae0b'],
+  ['home', 'photo-1616486338812-3dadae4b4ace'],
+  ['living', 'photo-1616486338812-3dadae4b4ace'],
+]
+
+function getCategoryImage(slug: string): string {
+  const match = categoryImageByKeyword.find(([keyword]) =>
+    slug.toLowerCase().includes(keyword),
+  )
+
+  const imageId = match?.[1] ?? 'photo-1490481651871-ab68de25d43d'
+
+  return `https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&q=85`
+}
 
 export function HomePage() {
   const { user } = useAuth()
@@ -28,28 +52,81 @@ export function HomePage() {
 
   const [activeCategory, setActiveCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [page, setPage] = useState(1)
+
+  const [categories, setCategories] = useState<CatalogCategory[]>([])
+  const [products, setProducts] = useState<CatalogProduct[]>([])
+  const [hasMoreProducts, setHasMoreProducts] = useState(false)
+
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [categoriesError, setCategoriesError] = useState('')
+
+  // This also tracks requests started by user interactions.
+  // It is not reset synchronously inside the effect.
+  const [productsLoading, setProductsLoading] = useState(true)
+
+  const [catalogError, setCatalogError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
+
   const [cartCount, setCartCount] = useState(0)
   const [notification, setNotification] = useState('')
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
 
-  const visibleProducts = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase()
+  useEffect(() => {
+    const controller = new AbortController()
 
-    return mockProducts.filter((product) => {
-      const matchesCategory =
-        activeCategory === 'all' || product.category === activeCategory
+    catalogApi
+      .getCategories(controller.signal)
+      .then((data) => {
+        setCategories(data)
+        setCategoriesError('')
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name !== 'AbortError') {
+          setCategoriesError(error.message)
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setCategoriesLoading(false)
+        }
+      })
 
-      const categoryName =
-        mockCategories.find((category) => category.id === product.category)
-          ?.name ?? ''
+    return () => controller.abort()
+  }, [])
 
-      const searchableText = `${product.name} ${categoryName}`.toLowerCase()
-      const matchesSearch = !query || searchableText.includes(query)
+  useEffect(() => {
+    const controller = new AbortController()
 
-      return matchesCategory && matchesSearch
-    })
-  }, [activeCategory, searchTerm])
+    catalogApi
+      .getProducts({
+        page,
+        limit: 12,
+        search: searchTerm,
+        categorySlug: activeCategory === 'all' ? undefined : activeCategory,
+        signal: controller.signal,
+      })
+      .then((result) => {
+        setProducts(result.products)
+        setHasMoreProducts(result.pagination.hasMore)
+        setCatalogError('')
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name !== 'AbortError') {
+          setCatalogError(error.message)
+          setProducts([])
+          setHasMoreProducts(false)
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setProductsLoading(false)
+        }
+      })
+
+    return () => controller.abort()
+  }, [activeCategory, page, retryKey, searchTerm])
 
   function showNotification(message: string) {
     setNotification(message)
@@ -73,16 +150,21 @@ export function HomePage() {
     )
   }
 
-  function selectCategory(categoryId: string) {
-    setActiveCategory(categoryId)
+  function selectCategory(categorySlug: string) {
+    setProductsLoading(true)
+    setActiveCategory(categorySlug)
+    setPage(1)
     setSearchTerm('')
+
     document.getElementById('products')?.scrollIntoView({
       behavior: 'smooth',
     })
   }
 
   function clearFilters() {
+    setProductsLoading(true)
     setActiveCategory('all')
+    setPage(1)
     setSearchTerm('')
   }
 
@@ -97,14 +179,45 @@ export function HomePage() {
     setSubscribed(true)
   }
 
-  const activeCategoryName =
-    mockCategories.find((category) => category.id === activeCategory)?.name
+  function handleSearchChange(value: string) {
+    setProductsLoading(true)
+    setSearchTerm(value)
+    setPage(1)
+  }
+
+  function handleProductImageError(
+    event: React.SyntheticEvent<HTMLImageElement>,
+  ) {
+    const image = event.currentTarget
+
+    // Prevent repeatedly trying the same fallback image.
+    if (image.dataset.fallbackApplied === 'true') {
+      return
+    }
+
+    image.dataset.fallbackApplied = 'true'
+    image.src = fallbackProductImage
+  }
+
+  const activeCategoryName = categories.find(
+    (category) => category.slug === activeCategory,
+  )?.name
+
+    function changePage(nextPage: number) {
+    setPage(nextPage)
+
+    document.getElementById('products')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
 
   return (
     <>
       <div className="store-header-shell">
         <div className="announcement-bar">
           <span>Good finds. Good prices. Good everyday.</span>
+
           <span className="announcement-extra">
             Thoughtfully picked, just for you
             <Sparkles size={13} aria-hidden="true" />
@@ -115,7 +228,6 @@ export function HomePage() {
       </div>
 
       <main className="store-home">
-
         <section className="store-hero">
           <div className="store-hero-copy">
             <p className="store-eyebrow">
@@ -175,6 +287,7 @@ export function HomePage() {
               <span className="hero-label-icon" aria-hidden="true">
                 <Sparkles size={17} />
               </span>
+
               <span>
                 <strong>Everyday, elevated.</strong>
                 <small>Small things. Better days.</small>
@@ -190,6 +303,7 @@ export function HomePage() {
             <span className="benefit-icon">
               <Truck size={19} aria-hidden="true" />
             </span>
+
             <div>
               <strong>Delivery made simple</strong>
               <p>Convenient delivery options</p>
@@ -200,6 +314,7 @@ export function HomePage() {
             <span className="benefit-icon">
               <ShieldCheck size={19} aria-hidden="true" />
             </span>
+
             <div>
               <strong>Shop with confidence</strong>
               <p>Secure shopping experience</p>
@@ -210,6 +325,7 @@ export function HomePage() {
             <span className="benefit-icon">
               <RotateCcw size={19} aria-hidden="true" />
             </span>
+
             <div>
               <strong>Here to help</strong>
               <p>Support when you need it</p>
@@ -235,34 +351,49 @@ export function HomePage() {
           </div>
 
           <div className="category-grid">
-            {mockCategories.map((category, index) => (
-              <button
-                className={`category-card ${
-                  activeCategory === category.id
-                    ? 'category-card-active'
-                    : ''
-                }`}
-                key={category.id}
-                type="button"
-                onClick={() => selectCategory(category.id)}
-                aria-pressed={activeCategory === category.id}
-              >
-                <span className="category-image-wrap">
-                  <img src={category.image} alt="" loading="lazy" />
-                  <span className="category-number">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span className="category-arrow" aria-hidden="true">
-                    <ArrowUpRight size={17} />
-                  </span>
-                </span>
+            {categoriesLoading ? null : categoriesError ? (
+              <p role="alert">{categoriesError}</p>
+            ) : categories.length === 0 ? (
+              <p>No categories are available yet.</p>
+            ) : (
+              categories.map((category, index) => (
+                <button
+                  className={`category-card ${
+                    activeCategory === category.slug
+                      ? 'category-card-active'
+                      : ''
+                  }`}
+                  key={category.id}
+                  type="button"
+                  onClick={() => selectCategory(category.slug)}
+                  aria-pressed={activeCategory === category.slug}
+                >
+                  <span className="category-image-wrap">
+                    <img
+                      src={getCategoryImage(category.slug)}
+                      alt=""
+                      loading="lazy"
+                    />
 
-                <span className="category-card-title">{category.name}</span>
-                <span className="category-card-description">
-                  {category.description}
-                </span>
-              </button>
-            ))}
+                    <span className="category-number">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+
+                    <span className="category-arrow" aria-hidden="true">
+                      <ArrowUpRight size={17} />
+                    </span>
+                  </span>
+
+                  <span className="category-card-title">
+                    {category.name}
+                  </span>
+
+                  <span className="category-card-description">
+                    {category.description || 'Explore the collection'}
+                  </span>
+                </button>
+              ))
+            )}
           </div>
         </section>
 
@@ -270,6 +401,7 @@ export function HomePage() {
           <div className="section-heading products-heading">
             <div>
               <p className="store-eyebrow">THE GOOD STUFF</p>
+
               <h2>
                 {activeCategory === 'all'
                   ? 'Little things, big favourites.'
@@ -280,11 +412,15 @@ export function HomePage() {
             <div className="product-tools">
               <label className="product-search">
                 <Search size={17} aria-hidden="true" />
+
                 <span className="sr-only">Search products</span>
+
                 <input
                   type="search"
                   value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
+                  onChange={(event) =>
+                    handleSearchChange(event.target.value)
+                  }
                   placeholder="Find something..."
                 />
               </label>
@@ -310,46 +446,61 @@ export function HomePage() {
                 activeCategory === 'all' ? 'active' : ''
               }`}
               type="button"
-              onClick={() => setActiveCategory('all')}
+              onClick={() => selectCategory('all')}
               aria-pressed={activeCategory === 'all'}
             >
               All finds
             </button>
 
-            {mockCategories.map((category) => (
+            {categories.map((category) => (
               <button
                 className={`filter-chip ${
-                  activeCategory === category.id ? 'active' : ''
+                  activeCategory === category.slug ? 'active' : ''
                 }`}
                 key={category.id}
                 type="button"
-                onClick={() => setActiveCategory(category.id)}
-                aria-pressed={activeCategory === category.id}
+                onClick={() => selectCategory(category.slug)}
+                aria-pressed={activeCategory === category.slug}
               >
                 {category.name}
               </button>
             ))}
           </div>
 
-          {visibleProducts.length > 0 ? (
-            <div className="product-grid">
-              {visibleProducts.map((product) => {
-                const categoryName = mockCategories.find(
-                  (category) => category.id === product.category,
-                )?.name
+          {catalogError ? (
+            <div className="empty-products" role="alert">
+              <h3>We couldn’t load the collection</h3>
+              <p>{catalogError}</p>
+
+              <button
+                className="button button-dark"
+                type="button"
+                onClick={() => {
+                  setProductsLoading(true)
+                  setRetryKey((current) => current + 1)
+                }}
+              >
+                Try again
+              </button>
+            </div>
+          ) : products.length > 0 ? (
+            <div className="product-grid" aria-busy={productsLoading}>
+              {products.map((product) => {
+                const image = product.imageUrl || fallbackProductImage
 
                 return (
                   <article className="product-card" key={product.id}>
                     <div className="product-image-wrap">
                       <img
-                        src={product.image}
-                        alt={product.imageAlt}
+                        src={image}
+                        alt={product.name}
                         loading="lazy"
+                        onError={handleProductImageError}
                       />
 
-                      {product.label && (
+                      {!product.inStock && (
                         <span className="product-label">
-                          {product.label}
+                          Out of stock
                         </span>
                       )}
 
@@ -365,45 +516,43 @@ export function HomePage() {
                       <button
                         className="quick-add"
                         type="button"
+                        disabled={!product.inStock}
                         onClick={() => addToBag(product.name)}
                       >
                         <ShoppingBag size={15} aria-hidden="true" />
-                        Add to bag
+
+                        {product.inStock ? 'Add to bag' : 'Out of stock'}
                       </button>
                     </div>
 
                     <div className="product-card-details">
                       <div className="product-category-name">
-                        {categoryName}
+                        {product.category?.name ?? 'Emmanex collection'}
                       </div>
 
                       <h3>{product.name}</h3>
 
-                      <div
-                        className="product-rating"
-                        aria-label={`Rating ${product.rating} out of 5 from ${product.reviews} reviews`}
-                      >
-                        <Star size={13} fill="currentColor" aria-hidden="true" />
-                        <strong>{product.rating.toFixed(1)}</strong>
-                        <span>({product.reviews})</span>
-                      </div>
-
                       <div className="product-prices">
-                        <strong>{formatNaira(product.price)}</strong>
-                        {product.previousPrice !== undefined && (
-                          <del>{formatNaira(product.previousPrice)}</del>
-                        )}
+                        <strong>
+                          {formatNaira(Number(product.price))}
+                        </strong>
                       </div>
                     </div>
                   </article>
                 )
               })}
             </div>
+          ) : productsLoading ? (
+            <div
+              className="empty-products"
+              aria-hidden="true"
+            />
           ) : (
             <div className="empty-products">
               <Search size={25} aria-hidden="true" />
               <h3>No finds just yet</h3>
               <p>Try another search or browse the full collection.</p>
+
               <button
                 className="button button-dark"
                 type="button"
@@ -414,9 +563,29 @@ export function HomePage() {
             </div>
           )}
 
-          <p className="mock-data-note">
-            Preview collection · Sample products and prices for design purposes
-          </p>
+          {!catalogError && products.length > 0 && (
+            <div className="catalog-pagination" aria-label="Product pagination">
+              <button
+                className="button button-light"
+                type="button"
+                disabled={page === 1 || productsLoading}
+                onClick={() => changePage(Math.max(1, page - 1))}
+              >
+                Previous
+              </button>
+
+              <span>Page {page}</span>
+
+              <button
+                className="button button-light"
+                type="button"
+                disabled={!hasMoreProducts || productsLoading}
+                onClick={() => changePage(page + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="editorial-banner">
@@ -430,19 +599,23 @@ export function HomePage() {
 
           <div className="editorial-copy">
             <p className="store-eyebrow">MAKE ROOM FOR GOOD THINGS</p>
+
             <h2>
               A little more joy
               <br />
               in the everyday.
             </h2>
+
             <p>
               Useful, lovely, and easy to make your own. Your next favourite
               might be closer than you think.
             </p>
+
             <a className="button button-light" href="#products">
               Find your favourite
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
+
             <span className="editorial-stamp">
               THE EMMANEX EDIT <Sparkles size={10} aria-hidden="true" />
             </span>
@@ -457,6 +630,7 @@ export function HomePage() {
           <div className="newsletter-copy">
             <p className="store-eyebrow">A NOTE FROM EMMANEX</p>
             <h2>Good things in your inbox.</h2>
+
             <p>
               Get first looks at new finds, thoughtful edits, and little offers
               worth opening.
@@ -468,6 +642,7 @@ export function HomePage() {
               <span>
                 <Check size={18} aria-hidden="true" />
               </span>
+
               <div>
                 <strong>You’re on the list.</strong>
                 <p>Thanks for joining the Emmanex preview.</p>
@@ -481,6 +656,7 @@ export function HomePage() {
               <label className="sr-only" htmlFor="newsletter-email">
                 Your email address
               </label>
+
               <input
                 id="newsletter-email"
                 type="email"
@@ -489,9 +665,14 @@ export function HomePage() {
                 placeholder="Your email address"
                 required
               />
-              <button type="submit" aria-label="Subscribe to newsletter">
+
+              <button
+                type="submit"
+                aria-label="Subscribe to newsletter"
+              >
                 <ArrowRight size={19} aria-hidden="true" />
               </button>
+
               <small>
                 Newsletter signup is a preview and does not submit your email
                 yet.
@@ -504,6 +685,7 @@ export function HomePage() {
           <div>
             <p className="store-eyebrow">YOUR EVERYDAY, YOUR WAY</p>
             <h2>Good things look good on you.</h2>
+
             <p>
               Create your account to get ready for the full Emmanex shopping
               experience.
@@ -539,6 +721,7 @@ export function HomePage() {
           <div className="footer-links">
             <a href="#categories">Shop categories</a>
             <a href="#products">Featured finds</a>
+
             {user ? (
               <Link to="/account">My account</Link>
             ) : (
@@ -551,9 +734,11 @@ export function HomePage() {
           <span>
             © {new Date().getFullYear()} Emmanex. All rights reserved.
           </span>
+
           <span>
             Made for everyday living <Sparkles size={10} aria-hidden="true" />
           </span>
+
           <span>Prices shown in Nigerian naira (₦)</span>
         </div>
       </footer>
@@ -561,7 +746,9 @@ export function HomePage() {
       {notification && (
         <div className="store-toast" role="status">
           <Check size={17} aria-hidden="true" />
+
           <span>{notification}</span>
+
           <button
             type="button"
             onClick={() => setNotification('')}
