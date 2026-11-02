@@ -23,6 +23,7 @@ type ToastMessage = {
   type: ToastType
   title: string
   message?: string
+  duration: number
 }
 
 
@@ -38,10 +39,10 @@ function ToastItem({
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       onDismiss(toast.id)
-    }, 4500)
+    }, toast.duration)
 
     return () => window.clearTimeout(timeoutId)
-  }, [toast.id, onDismiss])
+  }, [toast.id, toast.duration, onDismiss])
 
   const Icon =
     toast.type === 'success'
@@ -79,40 +80,41 @@ function ToastItem({
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<ToastMessage[]>([])
+  const [queue, setQueue] = useState<ToastMessage[]>([])
+  const activeToast = queue[0] ?? null
 
   const dismissToast = useCallback((id: number) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id))
+    setQueue((current) =>
+      current[0]?.id === id
+        ? current.slice(1)
+        : current.filter((toast) => toast.id !== id),
+    )
   }, [])
 
   const showToast = useCallback(
     ({ type, title, message, duration }: ToastInput) => {
       const id = ++nextToastId
 
-      setToasts((current) => [
+      setQueue((current) => [
         ...current,
-        { id, type, title, message },
+        { id, type, title, message, duration: duration && duration > 0 ? duration : 4500 },
       ])
-
-      if (duration && duration !== 4500) {
-        window.setTimeout(() => dismissToast(id), duration)
-      }
     },
-    [dismissToast],
+    [],
   )
 
   return (
     <ToastContext.Provider value={{ showToast, dismissToast }}>
       {children}
 
-      <div className="toast-container" aria-label="Notifications">
-        {toasts.map((toast) => (
+      <div className="toast-container" aria-label="Notifications" aria-live="polite">
+        {activeToast && (
           <ToastItem
-            key={toast.id}
-            toast={toast}
+            key={activeToast.id}
+            toast={activeToast}
             onDismiss={dismissToast}
           />
-        ))}
+        )}
       </div>
     </ToastContext.Provider>
   )

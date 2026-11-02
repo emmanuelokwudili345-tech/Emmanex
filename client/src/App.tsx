@@ -1,4 +1,6 @@
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
+import { CartPage } from './pages/CartPage'
+import { WishlistPage } from './pages/WishlistPage'
 import { useLayoutEffect } from 'react'
 import {
   BrowserRouter,
@@ -8,8 +10,10 @@ import {
   useLocation,
 } from 'react-router-dom'
 import { AuthPage } from './pages/AuthPage'
-import { AccountPage, CheckoutPage } from './pages/AccountPage'
+import { AccountPage } from './pages/AccountPage'
+import { CheckoutPage } from './pages/CheckoutPage'
 import { HomePage } from './pages/HomePage'
+import { ProductDetailsPage } from './pages/ProductDetailsPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import './App.css'
 
@@ -35,10 +39,13 @@ function AppRoutes() {
 
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/products/:slug" element={<ProductDetailsPage />} />
+        <Route path="/cart" element={<CartPage />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
 
         <Route element={<ProtectedRoute />}>
+          <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
         </Route>

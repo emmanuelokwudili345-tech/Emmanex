@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LogOut, ShoppingBag, UserRound } from 'lucide-react'
+import { Heart, LogOut, ShoppingBag, UserRound } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
+import { useCart } from '../features/cart/useCart'
 
-type SiteHeaderProps = {
-  cartCount?: number
-}
-
-export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
+export function SiteHeader() {
   const { user, logout } = useAuth()
+  const { itemCount } = useCart()
   const [signOutError, setSignOutError] = useState<string | null>(null)
 
   async function handleSignOut() {
@@ -34,9 +32,9 @@ export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
       </Link>
 
       <nav className="header-nav store-header-nav" aria-label="Main navigation">
-        <a href="#categories">Categories</a>
-        <a href="#products">Featured finds</a>
-        <a href="#newsletter">Our notes</a>
+        <Link to="/#categories">Categories</Link>
+        <Link to="/#products">Featured finds</Link>
+        <Link to="/#newsletter">Our notes</Link>
       </nav>
 
       <div className="header-actions store-header-actions">
@@ -61,21 +59,27 @@ export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
           </button>
         )}
 
-        <a
+        {user && (
+          <Link className="header-icon-link" to="/wishlist" aria-label="Wishlist" title="Wishlist">
+            <Heart size={19} strokeWidth={1.8} aria-hidden="true" />
+          </Link>
+        )}
+
+        <Link
           className="header-bag"
-          href="#products"
-          aria-label={`Shopping bag, ${cartCount} ${
-            cartCount === 1 ? 'item' : 'items'
+          to="/cart"
+          aria-label={`Shopping bag, ${itemCount} ${
+            itemCount === 1 ? 'item' : 'items'
           }`}
         >
           <ShoppingBag size={20} strokeWidth={1.8} aria-hidden="true" />
           <span>Bag</span>
-          {cartCount > 0 && (
+          {itemCount > 0 && (
             <span className="bag-count" aria-hidden="true">
-              {cartCount}
+              {itemCount}
             </span>
           )}
-        </a>
+        </Link>
       </div>
 
       {signOutError && (

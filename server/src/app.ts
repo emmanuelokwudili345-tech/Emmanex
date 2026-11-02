@@ -11,6 +11,7 @@ import {
 } from "./middleware/error-handler.js";
 import { createProfileRouter } from "./modules/auth/profile-routes.js";
 import { createCatalogRouter } from "./modules/catalog/catalog-routes.js";
+import { createShoppingRouter } from "./modules/shopping/shopping-routes.js";
 
 export function createApp(
   checkDatabase: () => Promise<void> = checkDatabaseConnection,
@@ -55,6 +56,7 @@ export function createApp(
 
   app.use("/api/auth", createProfileRouter());
   app.use("/api", createCatalogRouter());
+  app.use("/api", createShoppingRouter());
 
   app.use(notFoundHandler);
   app.use(errorHandler);

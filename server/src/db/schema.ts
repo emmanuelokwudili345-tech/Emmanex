@@ -10,6 +10,7 @@ import {
   integer,
   numeric,
   check,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 // Customer and admin profiles
@@ -150,4 +151,42 @@ export const orderItems = pgTable(
       sql`${table.lineTotal} >= 0`,
     ),
   ],
+);
+
+// Anonymous shopping sessions and persistent customer shopping data.
+export const shoppingSessions = pgTable("shopping_sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const cartItems = pgTable(
+  "cart_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id").references(() => shoppingSessions.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+    quantity: integer("quantity").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("cart_items_quantity_positive", sql`${table.quantity} > 0`),
+    check("cart_items_owner_check", sql`(${table.userId} IS NOT NULL AND ${table.sessionId} IS NULL) OR (${table.userId} IS NULL AND ${table.sessionId} IS NOT NULL)`),
+    uniqueIndex("cart_items_user_product_unique").on(table.userId, table.productId),
+    uniqueIndex("cart_items_session_product_unique").on(table.sessionId, table.productId),
+  ],
+);
+
+export const wishlistItems = pgTable(
+  "wishlist_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("wishlist_items_user_product_unique").on(table.userId, table.productId)],
 );

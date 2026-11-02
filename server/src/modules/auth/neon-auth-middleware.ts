@@ -25,18 +25,21 @@ function getJwks(url: string) {
   return jwks;
 }
 
-export function requireNeonAuth(config: AuthConfig): RequestHandler {
+export function createNeonAuthMiddleware(config: AuthConfig, optional: boolean): RequestHandler {
   return async (req, _res, next) => {
     const baseUrl = config.neonAuthBaseUrl;
     const jwksUrl = config.neonAuthJwksUrl;
 
+    const authorization = req.get("authorization");
+    const match = authorization?.match(/^Bearer\s+([^\s]+)$/i);
+    if (!match && optional) {
+      next();
+      return;
+    }
     if (!baseUrl || !jwksUrl) {
       next(new HttpError(503, "Neon Auth is not configured on the server."));
       return;
     }
-
-    const authorization = req.get("authorization");
-    const match = authorization?.match(/^Bearer\s+([^\s]+)$/i);
     if (!match) {
       next(new HttpError(401, "Authentication is required."));
       return;
@@ -63,4 +66,13 @@ export function requireNeonAuth(config: AuthConfig): RequestHandler {
       next(new HttpError(401, "Authentication is required."));
     }
   };
+}
+
+
+export function requireNeonAuth(config: AuthConfig): RequestHandler {
+  return createNeonAuthMiddleware(config, false);
+}
+
+export function optionalNeonAuth(config: AuthConfig): RequestHandler {
+  return createNeonAuthMiddleware(config, true);
 }

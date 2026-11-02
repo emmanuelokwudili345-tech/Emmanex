@@ -43,6 +43,13 @@
       "when": 1793143000668,
       "tag": "0005_link_neon_auth_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793610000000,
+      "tag": "0006_persistent_shopping",
+      "breakpoints": true
     }
   ]
 }

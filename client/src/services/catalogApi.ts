@@ -58,6 +58,14 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 export const catalogApi = {
+  async getProductBySlug(slug: string, signal?: AbortSignal): Promise<CatalogProduct> {
+    const data = await get<{ product: CatalogProduct }>(
+      `/products/${encodeURIComponent(slug)}`,
+      signal,
+    )
+    return data.product
+  },
+
   async getCategories(signal?: AbortSignal): Promise<CatalogCategory[]> {
     const data = await get<{ categories: CatalogCategory[] }>(
       '/categories',

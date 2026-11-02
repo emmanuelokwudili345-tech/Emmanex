@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type SyntheticEvent } from 'react'
 import {
   ArrowRight,
   ArrowUpRight,
@@ -7,15 +7,17 @@ import {
   RotateCcw,
   Search,
   Sparkles,
-  X,
   ShieldCheck,
-  ShoppingBag,
   Truck,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
-import { formatNaira } from '../data/mockStore'
+import { ProductGrid } from '../features/products/ProductGrid'
+import { ProductPagination } from '../features/products/ProductPagination'
+import { useCart } from '../features/cart/useCart'
+import { useWishlist } from '../features/wishlist/useWishlist'
+import { useToast } from '../components/useToast'
 import {
   catalogApi,
   type CatalogCategory,
@@ -49,6 +51,9 @@ function getCategoryImage(slug: string): string {
 export function HomePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { addItem } = useCart()
+  const { isSaved, toggleItem } = useWishlist()
+  const { showToast } = useToast()
 
   const [activeCategory, setActiveCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -68,8 +73,6 @@ export function HomePage() {
   const [catalogError, setCatalogError] = useState('')
   const [retryKey, setRetryKey] = useState(0)
 
-  const [cartCount, setCartCount] = useState(0)
-  const [notification, setNotification] = useState('')
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
 
@@ -128,26 +131,32 @@ export function HomePage() {
     return () => controller.abort()
   }, [activeCategory, page, retryKey, searchTerm])
 
-  function showNotification(message: string) {
-    setNotification(message)
+  async function addToBag(product: CatalogProduct) {
+    try {
+      await addItem(product)
+      showToast({ type: 'success', title: 'Added to your bag', message: product.name })
+    } catch (error) {
+      showToast({ type: 'error', title: 'Could not add product', message: error instanceof Error ? error.message : 'Please try again.' })
+    }
   }
 
-  function addToBag(productName: string) {
-    // Guests can use the cart. Sign-in is required later at checkout.
-    setCartCount((count) => count + 1)
-    showNotification(`${productName} added to your bag.`)
-  }
-
-  function handleWishlist(productName: string) {
+  async function handleWishlist(product: CatalogProduct) {
     if (!user) {
-      navigate('/login', { state: { from: '/' } })
+      navigate('/login', { state: { from: '/wishlist' } })
       return
     }
 
-    // Wishlist persistence will be implemented with the backend.
-    showNotification(
-      `Saving ${productName} to your wishlist will be available soon.`,
-    )
+    const wasSaved = isSaved(product.id)
+    try {
+      await toggleItem(product)
+      showToast({
+        type: wasSaved ? 'info' : 'success',
+        title: wasSaved ? 'Removed from wishlist' : 'Added to wishlist',
+        message: product.name,
+      })
+    } catch (error) {
+      showToast({ type: 'error', title: 'Wishlist could not be updated', message: error instanceof Error ? error.message : 'Please try again.' })
+    }
   }
 
   function selectCategory(categorySlug: string) {
@@ -186,7 +195,7 @@ export function HomePage() {
   }
 
   function handleProductImageError(
-    event: React.SyntheticEvent<HTMLImageElement>,
+    event: SyntheticEvent<HTMLImageElement>,
   ) {
     const image = event.currentTarget
 
@@ -203,7 +212,8 @@ export function HomePage() {
     (category) => category.slug === activeCategory,
   )?.name
 
-    function changePage(nextPage: number) {
+  function changePage(nextPage: number) {
+    setProductsLoading(true)
     setPage(nextPage)
 
     document.getElementById('products')?.scrollIntoView({
@@ -224,7 +234,7 @@ export function HomePage() {
           </span>
         </div>
 
-        <SiteHeader cartCount={cartCount} />
+        <SiteHeader />
       </div>
 
       <main className="store-home">
@@ -484,64 +494,14 @@ export function HomePage() {
               </button>
             </div>
           ) : products.length > 0 ? (
-            <div className="product-grid" aria-busy={productsLoading}>
-              {products.map((product) => {
-                const image = product.imageUrl || fallbackProductImage
-
-                return (
-                  <article className="product-card" key={product.id}>
-                    <div className="product-image-wrap">
-                      <img
-                        src={image}
-                        alt={product.name}
-                        loading="lazy"
-                        onError={handleProductImageError}
-                      />
-
-                      {!product.inStock && (
-                        <span className="product-label">
-                          Out of stock
-                        </span>
-                      )}
-
-                      <button
-                        className="product-wishlist"
-                        type="button"
-                        aria-label={`Save ${product.name} to wishlist`}
-                        onClick={() => handleWishlist(product.name)}
-                      >
-                        <Heart size={17} aria-hidden="true" />
-                      </button>
-
-                      <button
-                        className="quick-add"
-                        type="button"
-                        disabled={!product.inStock}
-                        onClick={() => addToBag(product.name)}
-                      >
-                        <ShoppingBag size={15} aria-hidden="true" />
-
-                        {product.inStock ? 'Add to bag' : 'Out of stock'}
-                      </button>
-                    </div>
-
-                    <div className="product-card-details">
-                      <div className="product-category-name">
-                        {product.category?.name ?? 'Emmanex collection'}
-                      </div>
-
-                      <h3>{product.name}</h3>
-
-                      <div className="product-prices">
-                        <strong>
-                          {formatNaira(Number(product.price))}
-                        </strong>
-                      </div>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
+            <ProductGrid
+              products={products}
+              isSaved={isSaved}
+              onAddToBag={addToBag}
+              onToggleWishlist={handleWishlist}
+              onImageError={handleProductImageError}
+              loading={productsLoading}
+            />
           ) : productsLoading ? (
             <div
               className="empty-products"
@@ -564,27 +524,12 @@ export function HomePage() {
           )}
 
           {!catalogError && products.length > 0 && (
-            <div className="catalog-pagination" aria-label="Product pagination">
-              <button
-                className="button button-light"
-                type="button"
-                disabled={page === 1 || productsLoading}
-                onClick={() => changePage(Math.max(1, page - 1))}
-              >
-                Previous
-              </button>
-
-              <span>Page {page}</span>
-
-              <button
-                className="button button-light"
-                type="button"
-                disabled={!hasMoreProducts || productsLoading}
-                onClick={() => changePage(page + 1)}
-              >
-                Next
-              </button>
-            </div>
+            <ProductPagination
+              page={page}
+              hasMore={hasMoreProducts}
+              loading={productsLoading}
+              onPageChange={changePage}
+            />
           )}
         </section>
 
@@ -743,21 +688,6 @@ export function HomePage() {
         </div>
       </footer>
 
-      {notification && (
-        <div className="store-toast" role="status">
-          <Check size={17} aria-hidden="true" />
-
-          <span>{notification}</span>
-
-          <button
-            type="button"
-            onClick={() => setNotification('')}
-            aria-label="Dismiss notification"
-          >
-            <X size={16} aria-hidden="true" />
-          </button>
-        </div>
-      )}
     </>
   )
 }
