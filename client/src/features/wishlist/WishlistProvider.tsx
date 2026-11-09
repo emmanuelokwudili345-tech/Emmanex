@@ -12,10 +12,43 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const userId = user?.id
   const [items, setItems] = useState<CatalogProduct[]>([])
   const itemsRef = useRef<CatalogProduct[]>([])
+  const itemsUserId = useRef<string | null>(null)
   const mutationQueue = useRef<Promise<void>>(Promise.resolve())
   const mutationVersion = useRef(0)
   const loadVersion = useRef(0)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const refreshWishlist = useCallback(async () => {
+    if (status !== 'authenticated' || !userId) return
+
+    if (itemsUserId.current !== userId) {
+      itemsUserId.current = userId
+      itemsRef.current = []
+      setItems([])
+    }
+
+    setIsLoading(true)
+    setLoadError(null)
+    const versionAtStart = mutationVersion.current
+    const requestVersion = ++loadVersion.current
+
+    try {
+      const nextItems = await shoppingApi.getWishlist()
+      if (mutationVersion.current === versionAtStart && loadVersion.current === requestVersion) {
+        itemsUserId.current = userId
+        itemsRef.current = nextItems
+        setItems(nextItems)
+      }
+    } catch (error) {
+      if (loadVersion.current === requestVersion) {
+        setLoadError(error instanceof Error ? error.message : 'We could not load your wishlist.')
+      }
+      throw error
+    } finally {
+      if (loadVersion.current === requestVersion) setIsLoading(false)
+    }
+  }, [status, userId])
 
   useEffect(() => {
     let active = true
@@ -24,32 +57,21 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       loadVersion.current += 1
       void Promise.resolve().then(() => {
         if (!active) return
+        itemsUserId.current = null
         itemsRef.current = []
         setItems([])
+        setLoadError(null)
         setIsLoading(false)
       })
       return () => { active = false }
     }
 
-    const versionAtStart = mutationVersion.current
-    const requestVersion = ++loadVersion.current
-    void shoppingApi.getWishlist()
-      .then((nextItems) => {
-        if (!active || mutationVersion.current !== versionAtStart || loadVersion.current !== requestVersion) return
-        itemsRef.current = nextItems
-        setItems(nextItems)
-      })
-      .catch(() => {
-        if (active) {
-          itemsRef.current = []
-          setItems([])
-        }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false)
-      })
-    return () => { active = false }
-  }, [status, userId])
+    void refreshWishlist().catch(() => undefined)
+    return () => {
+      active = false
+      loadVersion.current += 1
+    }
+  }, [status, userId, refreshWishlist])
 
   const isSaved = useCallback(
     (productId: string) => items.some((item) => item.id === productId),
@@ -73,12 +95,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         itemsRef.current = nextItems
         setItems(nextItems)
       }
+      setLoadError(null)
       return !wasSaved
     })
     mutationQueue.current = operation.then(() => undefined, () => undefined)
     return operation
   }, [])
 
-  const value = useMemo<WishlistContextValue>(() => ({ items, isLoading, isSaved, toggleItem }), [items, isLoading, isSaved, toggleItem])
+  const value = useMemo<WishlistContextValue>(() => ({ items, isLoading, loadError, isSaved, toggleItem, refreshWishlist }), [items, isLoading, loadError, isSaved, toggleItem, refreshWishlist])
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>
 }

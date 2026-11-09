@@ -13,7 +13,7 @@ const fallbackImage =
 
 export function WishlistPage() {
   const { user } = useAuth()
-  const { items, toggleItem } = useWishlist()
+  const { items, isLoading, loadError, refreshWishlist, toggleItem } = useWishlist()
   const { addItem } = useCart()
   const { showToast } = useToast()
 
@@ -63,39 +63,64 @@ export function WishlistPage() {
             <p className="store-eyebrow">YOUR SAVED FINDS</p>
             <h1>Wishlist</h1>
           </div>
-          <span>{items.length} saved</span>
+          <span>{isLoading ? 'Loading…' : loadError && items.length === 0 ? 'Unavailable' : `${items.length} saved`}</span>
         </div>
 
-        {items.length === 0 ? (
-          <section className="shopping-empty">
+        {isLoading ? (
+          <section className="shopping-empty" role="status">
+            <p>Loading your wishlist…</p>
+          </section>
+        ) : loadError && items.length === 0 ? (
+          <section className="shopping-empty" role="alert">
             <Heart size={32} />
-            <h2>Your wishlist is empty</h2>
-            <p>Save products you would like to come back to.</p>
-            <Link className="button button-dark" to="/">
-              Explore the collection
-            </Link>
+            <h2>We couldn’t load your wishlist</h2>
+            <p>{loadError}</p>
+            <button className="button button-dark" type="button" onClick={() => void refreshWishlist().catch(() => undefined)}>
+              Try again
+            </button>
           </section>
         ) : (
-          <div className="product-grid">
-            {items.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                saved
-                onToggleWishlist={(item) => {
-                  void toggleItem(item).then(() => handleRemove(item.name)).catch((error: unknown) => {
-                    showToast({ type: 'error', title: 'Wishlist could not be updated', message: error instanceof Error ? error.message : 'Please try again.' })
-                  })
-                }}
-                onAddToBag={(item) => {
-                  void addItem(item).then(() => handleAddToBag(item.name)).catch((error: unknown) => {
-                    showToast({ type: 'error', title: 'Could not add product', message: error instanceof Error ? error.message : 'Please try again.' })
-                  })
-                }}
-                onImageError={handleImageError}
-              />
-            ))}
-          </div>
+          <>
+            {loadError && (
+              <div className="form-alert" role="alert">
+                <p>We couldn’t refresh your wishlist. {loadError}</p>
+                <button type="button" onClick={() => void refreshWishlist().catch(() => undefined)}>
+                  Try again
+                </button>
+              </div>
+            )}
+            {items.length === 0 ? (
+              <section className="shopping-empty">
+                <Heart size={32} />
+                <h2>Your wishlist is empty</h2>
+                <p>Save products you would like to come back to.</p>
+                <Link className="button button-dark" to="/">
+                  Explore the collection
+                </Link>
+              </section>
+            ) : (
+              <div className="product-grid">
+                {items.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    saved
+                    onToggleWishlist={(item) => {
+                      void toggleItem(item).then(() => handleRemove(item.name)).catch((error: unknown) => {
+                        showToast({ type: 'error', title: 'Wishlist could not be updated', message: error instanceof Error ? error.message : 'Please try again.' })
+                      })
+                    }}
+                    onAddToBag={(item) => {
+                      void addItem(item).then(() => handleAddToBag(item.name)).catch((error: unknown) => {
+                        showToast({ type: 'error', title: 'Could not add product', message: error instanceof Error ? error.message : 'Please try again.' })
+                      })
+                    }}
+                    onImageError={handleImageError}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 

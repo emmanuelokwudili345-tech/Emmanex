@@ -16,6 +16,13 @@ export interface ShoppingCartItem {
   quantity: number
 }
 
+export interface ShoppingCartData {
+  items: ShoppingCartItem[]
+  summary: {
+    subtotal: string
+  }
+}
+
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -37,32 +44,32 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const shoppingApi = {
-  async getCart(): Promise<ShoppingCartItem[]> {
-    const data = await request<{ items: ShoppingCartItem[] }>('/cart')
-    return data.items
+  async getCart(): Promise<ShoppingCartData> {
+    return request<ShoppingCartData>('/cart')
   },
-  async addCartItem(productId: string, quantity = 1): Promise<ShoppingCartItem[]> {
-    const data = await request<{ items: ShoppingCartItem[] }>('/cart/items', {
-      method: 'POST', body: JSON.stringify({ productId, quantity }),
+  async addCartItem(productId: string, quantity = 1): Promise<ShoppingCartData> {
+    return request<ShoppingCartData>('/cart/items', {
+      method: 'POST', 
+      body: JSON.stringify({ productId, quantity }),
     })
-    return data.items
   },
-  async updateCartItem(productId: string, quantity: number): Promise<ShoppingCartItem[]> {
-    const data = await request<{ items: ShoppingCartItem[] }>(`/cart/items/${encodeURIComponent(productId)}`, {
-      method: 'PATCH', body: JSON.stringify({ quantity }),
+  async updateCartItem(productId: string, quantity: number): Promise<ShoppingCartData> {
+    return request<ShoppingCartData>(`/cart/items/${encodeURIComponent(productId)}`, {
+      method: 'PATCH', 
+      body: JSON.stringify({ quantity }),
     })
-    return data.items
   },
-  async removeCartItem(productId: string): Promise<ShoppingCartItem[]> {
-    const data = await request<{ items: ShoppingCartItem[] }>(`/cart/items/${encodeURIComponent(productId)}`, { method: 'DELETE' })
-    return data.items
+  async removeCartItem(productId: string): Promise<ShoppingCartData> {
+    return request<ShoppingCartData>(`/cart/items/${encodeURIComponent(productId)}`, { method: 'DELETE' })
   },
   async getWishlist(): Promise<CatalogProduct[]> {
     const data = await request<{ items: CatalogProduct[] }>('/wishlist')
     return data.items
   },
   async addWishlistItem(productId: string): Promise<void> {
-    await request('/wishlist/items', { method: 'POST', body: JSON.stringify({ productId }) })
+    await request('/wishlist/items', { 
+      method: 'POST', 
+      body: JSON.stringify({ productId }) })
   },
   async removeWishlistItem(productId: string): Promise<void> {
     await request(`/wishlist/items/${encodeURIComponent(productId)}`, { method: 'DELETE' })

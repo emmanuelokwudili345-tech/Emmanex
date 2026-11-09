@@ -127,6 +127,24 @@ async function getCartItems(owner: { userId: string | null; sessionId: string | 
   }));
 }
 
+
+async function getCartData(owner: { userId: string | null; sessionId: string | null }) {
+  const condition = owner.userId
+    ? eq(cartItems.userId, owner.userId)
+    : eq(cartItems.sessionId, owner.sessionId!);
+
+  const [summary] = await db.select({
+    subtotal: sql<string>`COALESCE(SUM(${products.price} * ${cartItems.quantity}), 0)::text`,
+  }).from(cartItems)
+    .innerJoin(products, eq(cartItems.productId, products.id))
+    .where(condition);
+
+  return {
+    items: await getCartItems(owner),
+    summary: { subtotal: summary?.subtotal ?? "0.00" },
+  };
+}
+
 export function createShoppingRouter() {
   const router = Router();
   const authConfig = getAuthConfig();
@@ -135,7 +153,7 @@ export function createShoppingRouter() {
   router.get("/cart", async (req, res, next) => {
     try {
       const owner = await resolveCartOwner(req, res);
-      res.json(successResponse("Shopping bag retrieved.", { items: await getCartItems(owner) }));
+      res.json(successResponse("Shopping bag retrieved.", await getCartData(owner)));
     } catch (error) { next(error); }
   });
 
@@ -166,7 +184,7 @@ export function createShoppingRouter() {
         })
         .returning({ id: cartItems.id });
       if (!savedItem) throw new HttpError(409, "There is not enough stock for this quantity.");
-      res.status(201).json(successResponse("Product added to your bag.", { items: await getCartItems(owner) }));
+      res.status(201).json(successResponse("Product added to your bag.", await getCartData(owner)));
     } catch (error) { next(error); }
   });
 
@@ -182,7 +200,7 @@ export function createShoppingRouter() {
       if (!item) throw new HttpError(404, "Cart item not found.");
       if (quantity > item.stock) throw new HttpError(409, "There is not enough stock for this quantity.");
       await db.update(cartItems).set({ quantity, updatedAt: new Date() }).where(eq(cartItems.id, item.id));
-      res.json(successResponse("Shopping bag updated.", { items: await getCartItems(owner) }));
+      res.json(successResponse("Shopping bag updated.", await getCartData(owner)));
     } catch (error) { next(error); }
   });
 
@@ -193,7 +211,7 @@ export function createShoppingRouter() {
         ? and(eq(cartItems.userId, owner.userId), eq(cartItems.productId, req.params.productId))
         : and(eq(cartItems.sessionId, owner.sessionId!), eq(cartItems.productId, req.params.productId));
       await db.delete(cartItems).where(condition);
-      res.json(successResponse("Product removed from your bag.", { items: await getCartItems(owner) }));
+      res.json(successResponse("Product removed from your bag.", await getCartData(owner)));
     } catch (error) { next(error); }
   });
 
