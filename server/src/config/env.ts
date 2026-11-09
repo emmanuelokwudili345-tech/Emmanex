@@ -9,6 +9,7 @@ const DEFAULT_PORT = 5000;
 
 export interface AuthConfig {
   corsOrigins: string[];
+  trustProxyHops?: number;
   neonAuthBaseUrl?: string;
   neonAuthJwksUrl?: string;
 }
@@ -70,6 +71,16 @@ export function getAuthConfig(
       return parsed.origin;
     }) ?? ["http://localhost:5173"];
 
+  const trustProxyValue = env.TRUST_PROXY_HOPS?.trim();
+  let trustProxyHops = 0;
+
+  if (trustProxyValue) {
+    trustProxyHops = Number(trustProxyValue);
+    if (!Number.isSafeInteger(trustProxyHops) || trustProxyHops < 0) {
+      throw new Error("TRUST_PROXY_HOPS must be a non-negative integer.");
+    }
+  }
+
   const neonAuthBaseUrl = env.NEON_AUTH_BASE_URL?.trim();
   const neonAuthJwksUrl = env.NEON_AUTH_JWKS_URL?.trim();
 
@@ -105,6 +116,7 @@ export function getAuthConfig(
 
   return {
     corsOrigins,
+    trustProxyHops,
     ...(neonAuthBaseUrl && neonAuthJwksUrl
       ? { neonAuthBaseUrl, neonAuthJwksUrl }
       : {}),

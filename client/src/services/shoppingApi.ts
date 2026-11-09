@@ -23,6 +23,37 @@ export interface ShoppingCartData {
   }
 }
 
+export interface ShippingOption {
+  state: string
+  zone: string
+  shippingFee: string
+}
+
+export interface CheckoutDetails {
+  recipientName: string
+  phone: string
+  addressLine1: string
+  addressLine2: string
+  city: string
+  state: string
+  postalCode: string
+  mockPaymentOutcome: 'success' | 'failure'
+}
+
+export interface OrderConfirmation {
+  id: string
+  status: 'confirmed'
+  subtotal: string
+  shippingFee: string
+  total: string
+  items: Array<{
+    productName: string
+    unitPrice: string
+    quantity: number
+    lineTotal: string
+  }>
+}
+
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -73,5 +104,16 @@ export const shoppingApi = {
   },
   async removeWishlistItem(productId: string): Promise<void> {
     await request(`/wishlist/items/${encodeURIComponent(productId)}`, { method: 'DELETE' })
+  },
+  async getShippingOptions(): Promise<ShippingOption[]> {
+    const data = await request<{ options: ShippingOption[] }>('/shipping/options')
+    return data.options
+  },
+  async submitMockOrder(details: CheckoutDetails): Promise<OrderConfirmation> {
+    const data = await request<{ order: OrderConfirmation }>('/orders', {
+      method: 'POST',
+      body: JSON.stringify(details),
+    })
+    return data.order
   },
 }

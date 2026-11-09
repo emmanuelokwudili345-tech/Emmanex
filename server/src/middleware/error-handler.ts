@@ -36,6 +36,16 @@ export const errorHandler: ErrorRequestHandler = (
     return;
   }
 
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "type" in error &&
+    error.type === "entity.too.large"
+  ) {
+    res.status(413).json(errorResponse("Request body is too large."));
+    return;
+  }
+
   console.error("Unhandled request error.");
   res.status(500).json(errorResponse("An unexpected error occurred."));
 };

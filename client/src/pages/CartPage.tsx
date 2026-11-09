@@ -62,7 +62,7 @@ export function CartPage() {
                       <button type="button" aria-label="Increase quantity" onClick={() => { void updateQuantity(product.id, quantity + 1).catch((error: unknown) => showToast({ type: 'error', title: 'Could not update quantity', message: error instanceof Error ? error.message : 'Please try again.' })) }}><Plus size={14} /></button>
                     </div>
                   </div>
-                  <button className="remove-cart-item" type="button" aria-label={`Remove ${product.name}`} onClick={() => { void removeItem(product.id).then(() => showToast({ type: 'info', title: 'Removed from your bag', message: product.name })).catch((error: unknown) => showToast({ type: 'error', title: 'Could not remove product', message: error instanceof Error ? error.message : 'Please try again.' })) }}><Trash2 size={17} /></button>
+                <button className="remove-cart-item" type="button" aria-label={`Remove ${product.name}`} onClick={() => { void removeItem(product.id).then(() => showToast({ type: 'success', title: 'Removed from your bag', message: product.name })).catch((error: unknown) => showToast({ type: 'error', title: 'Could not remove product', message: error instanceof Error ? error.message : 'Please try again.' })) }}><Trash2 size={17} /></button>
                 </article>
               ))}
               </section>

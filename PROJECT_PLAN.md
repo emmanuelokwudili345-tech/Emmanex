@@ -399,6 +399,12 @@ Security is mandatory throughout development.
 - Prevent overselling through safe inventory updates.
 - Avoid returning stack traces or sensitive database details to clients.
 
+### Current security implementation notes
+
+- The Express API applies Helmet security headers, limits JSON request bodies to 32 KB, and applies IP-based limits of 300 API requests and 60 write requests per 15 minutes. The default limiter store is in-memory; multi-instance deployments need a shared store.
+- `TRUST_PROXY_HOPS` defaults to `0`. Set it to the actual trusted proxy hop count in deployment so rate limits use the client IP without trusting arbitrary forwarded headers.
+- Email/password authentication is managed by Neon Auth. Sign-in, registration, and password-reset requests bypass Express; Neon Auth's own rate limits and email delivery configuration apply to those endpoints.
+
 Security-sensitive implementation choices must be explained before being introduced.
 
 ---

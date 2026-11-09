@@ -1,6 +1,6 @@
 
 import { useState, type FormEvent } from 'react'
-import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react'
 import {
   Link,
   Navigate,
@@ -27,7 +27,7 @@ export function AuthPage({ mode }: AuthPageProps) {
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   if (status === 'authenticated') {
@@ -48,7 +48,6 @@ export function AuthPage({ mode }: AuthPageProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setFormError(null)
     setSubmitting(true)
 
     try {
@@ -92,8 +91,6 @@ export function AuthPage({ mode }: AuthPageProps) {
         cause,
         isRegister ? 'register' : 'login',
       )
-
-      setFormError(message)
 
       showToast({
         type: 'error',
@@ -164,12 +161,6 @@ export function AuthPage({ mode }: AuthPageProps) {
               </div>
             )}
 
-            {formError && (
-              <div className="form-alert" role="alert">
-                {formError}
-              </div>
-            )}
-
             <form className="auth-form" onSubmit={handleSubmit}>
               {isRegister && (
                 <div className="form-row">
@@ -201,7 +192,7 @@ export function AuthPage({ mode }: AuthPageProps) {
                 </div>
               )}
 
-              <label>
+                  <label>
                 Email address
                 <input
                   autoComplete="email"
@@ -213,25 +204,34 @@ export function AuthPage({ mode }: AuthPageProps) {
                 />
               </label>
 
-              <label>
+              <label className="password-field-label">
                 Password
                 <input
                   autoComplete={
                     isRegister ? 'new-password' : 'current-password'
                   }
-                  type="password"
-                  minLength={isRegister ? 12 : 1}
+                  type={showPassword ? 'text' : 'password'}
+                  minLength={isRegister ? 8 : 1}
                   maxLength={128}
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
 
-                {isRegister && (
-                  <span className="field-hint">
-                    Use at least 12 characters.
-                  </span>
-                )}
+                <button
+                  className="password-visibility-toggle"
+                  type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} strokeWidth={1.8} aria-hidden="true" />
+                  ) : (
+                    <Eye size={18} strokeWidth={1.8} aria-hidden="true" />
+                  )}
+                </button>
+                {isRegister && <span className="field-hint">Use at least 8 characters.</span>}
               </label>
 
               <button
@@ -258,6 +258,9 @@ export function AuthPage({ mode }: AuthPageProps) {
                   {isRegister ? 'Sign in' : 'Create an account'}
                 </Link>
               </p>
+              {!isRegister && (
+                <p className="form-switch"><Link to="/forgot-password">Forgot password?</Link></p>
+              )}
             </form>
 
             <p className="privacy-note">

@@ -15,6 +15,7 @@ import { CheckoutPage } from './pages/CheckoutPage'
 import { HomePage } from './pages/HomePage'
 import { ProductDetailsPage } from './pages/ProductDetailsPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import './App.css'
 
 function ScrollToTop() {
@@ -43,6 +44,7 @@ function AppRoutes() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="/wishlist" element={<WishlistPage />} />
