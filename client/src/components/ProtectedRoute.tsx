@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 
 export function ProtectedRoute() {
-  const { status, refreshSession } = useAuth()
+  const { status, error, refreshSession } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') {
@@ -19,7 +19,7 @@ export function ProtectedRoute() {
       <main className="state-screen">
         <div className="state-icon">!</div>
         <h1>We couldn’t verify your session</h1>
-        <p>Check your connection and try again.</p>
+        <p>{error ?? 'Check your connection and try again.'}</p>
         <button className="button button-dark" onClick={() => void refreshSession()}>
           Try again
         </button>

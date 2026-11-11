@@ -78,8 +78,29 @@ function createTestApp(options: {
         return linkedProfile;
       }
 
+      if (emailProfile?.neonAuthUserId === id) {
+        return emailProfile;
+      }
+
       if (createdProfile?.neonAuthUserId === id) {
         return createdProfile;
+      }
+
+      return undefined;
+    },
+
+    async linkByEmail(email: string, neonAuthUserId: string) {
+      if (
+        emailProfile?.email === email &&
+        emailProfile.neonAuthUserId === null
+      ) {
+        emailProfile = {
+          ...emailProfile,
+          neonAuthUserId,
+          updatedAt: new Date(),
+        };
+
+        return emailProfile;
       }
 
       return undefined;
@@ -162,6 +183,7 @@ function createTestApp(options: {
   return {
     app,
     getCreatedProfile: () => createdProfile,
+    getEmailProfile: () => emailProfile,
     getCreateCount: () => createCount,
   };
 }
@@ -272,7 +294,7 @@ test("does not allow the client to assign an admin role", async () => {
   );
 });
 
-test("rejects an existing email that is not linked to this identity", async () => {
+test("links an existing profile when the verified email matches exactly", async () => {
   const { response, context } = await requestProfile({
     emailProfile: makeProfile({
       id: "existing-profile",
@@ -280,7 +302,40 @@ test("rejects an existing email that is not linked to this identity", async () =
     }),
   });
 
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.message, "Existing customer profile linked successfully.");
+  assert.equal(body.data.id, "existing-profile");
+  assert.equal(context.getEmailProfile()?.neonAuthUserId, neonUserId);
+  assert.equal(context.getCreateCount(), 0);
+});
+
+test("does not link an inactive existing profile", async () => {
+  const { response, context } = await requestProfile({
+    emailProfile: makeProfile({
+      id: "existing-profile",
+      neonAuthUserId: null,
+      isActive: false,
+    }),
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(context.getCreateCount(), 0);
+});
+
+test("does not relink an existing profile already linked to another identity", async () => {
+  const { response, context } = await requestProfile({
+    emailProfile: makeProfile({
+      id: "existing-profile",
+      neonAuthUserId: "another-neon-user",
+    }),
+  });
+
   assert.equal(response.status, 409);
+  assert.equal(
+    (await response.json()).message,
+    "This email is already linked to another Neon Auth account.",
+  );
   assert.equal(context.getCreateCount(), 0);
 });
 

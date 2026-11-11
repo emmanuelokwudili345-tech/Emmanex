@@ -18,7 +18,7 @@ export interface AuthPageProps {
 
 export function AuthPage({ mode }: AuthPageProps) {
   const isRegister = mode === 'register'
-  const { status, login, register } = useAuth()
+  const { status, error, login, register } = useAuth()
   const { showToast } = useToast()
   const location = useLocation()
   const navigate = useNavigate()
@@ -156,8 +156,8 @@ export function AuthPage({ mode }: AuthPageProps) {
 
             {status === 'error' && (
               <div className="form-alert" role="alert">
-                We couldn’t verify your saved session. You can still try
-                signing in.
+                {error ??
+                  'We couldn’t verify your saved session. You can still try signing in.'}
               </div>
             )}
 

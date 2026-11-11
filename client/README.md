@@ -18,23 +18,33 @@ For a deployed frontend, set `VITE_API_BASE_URL` to the backend API base URL,
 including `/api` (for example, `https://api.example.com/api`). This value is
 public client configuration and must not contain secrets.
 
-## Cookie and CSRF configuration
+Set `VITE_NEON_AUTH_URL` to your Neon Auth URL. The client also accepts
+`VITE_NEON_AUTH_BASE_URL` for compatibility with deployments that already use
+that variable name. This is a public URL, not a secret. The deployed client
+bundle must be rebuilt after changing either variable; redeploy the Vercel
+project after saving environment-variable changes.
 
-Authentication uses the backend's HttpOnly session cookie and an in-memory
-CSRF token obtained from the authenticated `/api/auth/csrf` response. The
-frontend does not read the session cookie or persist either token in browser
-storage. API requests include credentials.
+For a separate backend deployment, `VITE_API_BASE_URL` must point to that
+backend, including its `/api` prefix. Leaving it unset makes the client request
+the frontend's own `/api` path. Check that
+`https://<your-backend-host>/api/health` returns the API health response and
+that `/api/health/ready` succeeds when the database is configured.
 
-Configure the backend `CORS_ORIGINS` with the exact frontend origin. For a
-cross-site frontend/API deployment, use HTTPS and configure
-`SESSION_COOKIE_SAME_SITE=none` and `SESSION_COOKIE_SECURE=true`. Same-site
-deployments can use the backend's stricter `lax` default. Do not use wildcard
-CORS origins with credentialed requests.
+The backend requires `DATABASE_URL`, `NEON_AUTH_BASE_URL`,
+`NEON_AUTH_JWKS_URL`, and `CORS_ORIGINS`. Set `CORS_ORIGINS` to the exact
+frontend origin, such as `https://emmanex.vercel.app` (no trailing slash).
+The Neon Auth base URL and JWKS URL must come from the same Neon Auth project.
+The frontend obtains a Neon Auth JWT and sends it to the backend as a bearer
+token; the backend verifies it using the configured JWKS URL. The shopping
+guest-cart cookie is separate from authentication. When a verified Neon Auth
+email exactly matches an active, unlinked Emmanex customer profile, the backend
+links that profile to the Neon Auth identity. Profiles already linked to
+another identity are not reassigned.
 
 ## Current feature boundary
 
 Registration, sign-in, sign-out, session restoration, and the protected account
-screen are wired to the backend. Product discovery, order history, and checkout
-remain unavailable until their backend services are implemented. Authentication
-also requires the backend sessions migration to be applied; the frontend does
-not simulate authentication when the API or database is unavailable.
+screen use Neon Auth, with customer profiles synchronized through the backend.
+Apply the server database migrations before deploying; the Neon Auth identity
+link migration is required for profile synchronization. The frontend does not
+simulate authentication when the API or database is unavailable.

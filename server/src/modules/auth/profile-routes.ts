@@ -1,4 +1,4 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { Router, type RequestHandler } from "express";
 import { successResponse } from "../../api-response.js";
 import { getAuthConfig } from "../../config/env.js";
@@ -21,6 +21,10 @@ interface ProfileRouteDependencies {
   getAuthUser(id: string): Promise<NeonAuthRecord | null>;
   findByNeonId(id: string): Promise<CustomerProfile | undefined>;
   findByEmail(email: string): Promise<CustomerProfile | undefined>;
+  linkByEmail(
+    email: string,
+    neonAuthUserId: string,
+  ): Promise<CustomerProfile | undefined>;
   findEmailOwner(
     email: string,
     excludedUserId: string,
@@ -122,6 +126,24 @@ function createProductionDependencies(): ProfileRouteDependencies {
         .from(users)
         .where(eq(users.email, email))
         .limit(1);
+
+      return user;
+    },
+
+    async linkByEmail(email, neonAuthUserId) {
+      const [user] = await db
+        .update(users)
+        .set({
+          neonAuthUserId,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(users.email, email),
+            isNull(users.neonAuthUserId),
+          ),
+        )
+        .returning();
 
       return user;
     },
@@ -260,9 +282,48 @@ export function createProfileRouter(
       const existingEmail = await dependencies.findByEmail(email);
 
       if (existingEmail) {
+        if (!existingEmail.isActive) {
+          throw new HttpError(403, "This account is inactive.");
+        }
+
+        if (existingEmail.neonAuthUserId) {
+          throw new HttpError(
+            409,
+            "This email is already linked to another Neon Auth account.",
+          );
+        }
+
+        const linkedProfile = await dependencies.linkByEmail(
+          email,
+          neonUserId,
+        );
+
+        if (linkedProfile) {
+          res.json(
+            successResponse(
+              "Existing customer profile linked successfully.",
+              publicProfile(linkedProfile),
+            ),
+          );
+          return;
+        }
+
+        const concurrentlyLinkedProfile =
+          await dependencies.findByNeonId(neonUserId);
+
+        if (concurrentlyLinkedProfile?.id === existingEmail.id) {
+          res.json(
+            successResponse(
+              "Existing customer profile linked successfully.",
+              publicProfile(concurrentlyLinkedProfile),
+            ),
+          );
+          return;
+        }
+
         throw new HttpError(
           409,
-          "A profile already exists for this email. Account linking requires a separate, verified process.",
+          "A conflicting customer profile already exists.",
         );
       }
 
