@@ -42,8 +42,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Load data asynchronously in the effect; do not synchronously update state from its body.
   useEffect(() => {
     if (status === 'loading') return
-    void refreshCart().catch(() => undefined)
-    return () => { loadVersion.current += 1 }
+    let active = true
+    void Promise.resolve().then(() => {
+      if (active) return refreshCart()
+    }).catch(() => undefined)
+    return () => {
+      active = false
+      loadVersion.current += 1
+    }
   }, [status, userId, refreshCart])
 
   const runMutation = useCallback(<T,>(operation: () => Promise<T>) => {

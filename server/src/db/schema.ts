@@ -89,6 +89,7 @@ export const orders = pgTable("orders", {
     .references(() => users.id, { onDelete: "restrict" }),
 
   status: orderStatusEnum("status").notNull().default("pending"),
+  isDemo: boolean("is_demo").notNull().default(false),
 
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
   shippingFee: numeric("shipping_fee", { precision: 12, scale: 2 })

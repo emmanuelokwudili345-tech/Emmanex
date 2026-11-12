@@ -1,10 +1,42 @@
+import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
+import { formatNaira } from '../lib/formatCurrency'
+import { shoppingApi, type CustomerOrder } from '../services/shoppingApi'
 
 export function AccountPage() {
   const { user } = useAuth()
+  const [orders, setOrders] = useState<CustomerOrder[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(true)
+  const [ordersError, setOrdersError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+
+  useEffect(() => {
+    let active = true
+
+    void shoppingApi.getOrderHistory()
+      .then((customerOrders) => {
+        if (active) setOrders(customerOrders)
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setOrdersError(
+            error instanceof Error
+              ? error.message
+              : 'We could not load your order history.',
+          )
+        }
+      })
+      .finally(() => {
+        if (active) setOrdersLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [retryCount])
 
   if (!user) return null
 
@@ -15,8 +47,7 @@ export function AccountPage() {
         <p className="eyebrow">Your Emmanex</p>
         <h1>Welcome back, {user.firstName}.</h1>
         <p className="account-lead">
-          Your account is ready. We’re still preparing the first collection and
-          order experience.
+          Your account is ready. Review your profile and order history here.
         </p>
 
         <div className="account-grid">
@@ -42,16 +73,56 @@ export function AccountPage() {
           </section>
 
           <section className="account-card orders-card">
-            <span className="card-kicker">COMING SOON</span>
+            <span className="card-kicker">ORDER HISTORY</span>
             <h2>Your orders</h2>
-            <p>
-              Order history will appear here once the store’s product and order
-              services are available.
-            </p>
-            <Link className="text-link" to="/">
-              Back to discover
-              <ArrowRight size={14} aria-hidden="true" />
-            </Link>
+            {ordersLoading ? (
+              <p role="status">Loading your orders…</p>
+            ) : ordersError ? (
+              <div className="order-history-error" role="alert">
+                <p>{ordersError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrdersLoading(true)
+                    setOrdersError(null)
+                    setRetryCount((count) => count + 1)
+                  }}
+                >
+                  Try again
+                </button>
+              </div>
+            ) : orders.length === 0 ? (
+              <>
+                <p>You haven’t placed an order yet.</p>
+                <Link className="text-link" to="/">
+                  Explore the collection
+                  <ArrowRight size={14} aria-hidden="true" />
+                </Link>
+              </>
+            ) : (
+              <div className="order-history-list">
+                {orders.map((order) => (
+                  <article className="order-history-item" key={order.id}>
+                    <div className="order-history-heading">
+                      <strong>Order {order.id.slice(0, 8).toUpperCase()}</strong>
+                      <span>
+                        {order.isDemo
+                          ? 'DEMO · NOT PAID'
+                          : order.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <p>
+                      {new Date(order.createdAt).toLocaleDateString()} ·{' '}
+                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                    </p>
+                    <p className="order-history-products">
+                      {order.items.map((item) => `${item.productName} × ${item.quantity}`).join(', ')}
+                    </p>
+                    <strong>{formatNaira(Number(order.total))}</strong>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       </main>

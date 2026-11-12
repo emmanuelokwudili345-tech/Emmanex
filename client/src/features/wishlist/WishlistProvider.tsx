@@ -66,7 +66,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return () => { active = false }
     }
 
-    void refreshWishlist().catch(() => undefined)
+    void Promise.resolve().then(() => {
+      if (active) return refreshWishlist()
+    }).catch(() => undefined)
     return () => {
       active = false
       loadVersion.current += 1

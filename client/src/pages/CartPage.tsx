@@ -71,7 +71,6 @@ export function CartPage() {
                 <div><span>Subtotal</span><strong>{formatNaira(Number(subtotal))}</strong></div>
                 <p>Delivery and any applicable charges are calculated at checkout.</p>
                 <button className="button button-dark" type="button" onClick={() => navigate('/checkout')}>Continue to checkout</button>
-                <small>Sign in is required to continue to checkout.</small>
               </aside>
             </div>
           </>

@@ -37,21 +37,34 @@ export interface CheckoutDetails {
   city: string
   state: string
   postalCode: string
-  mockPaymentOutcome: 'success' | 'failure'
+  demoOutcome: 'success' | 'failure'
 }
 
 export interface OrderConfirmation {
   id: string
-  status: 'confirmed'
+  status: 'pending'
+  isDemo: true
   subtotal: string
   shippingFee: string
   total: string
+  createdAt: string
   items: Array<{
     productName: string
     unitPrice: string
     quantity: number
     lineTotal: string
   }>
+}
+
+export interface CustomerOrder {
+  id: string
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  isDemo: boolean
+  subtotal: string
+  shippingFee: string
+  total: string
+  createdAt: string
+  items: OrderConfirmation['items']
 }
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
@@ -109,7 +122,11 @@ export const shoppingApi = {
     const data = await request<{ options: ShippingOption[] }>('/shipping/options')
     return data.options
   },
-  async submitMockOrder(details: CheckoutDetails): Promise<OrderConfirmation> {
+  async getOrderHistory(): Promise<CustomerOrder[]> {
+    const data = await request<{ orders: CustomerOrder[] }>('/orders')
+    return data.orders
+  },
+  async submitDemoOrder(details: CheckoutDetails): Promise<OrderConfirmation> {
     const data = await request<{ order: OrderConfirmation }>('/orders', {
       method: 'POST',
       body: JSON.stringify(details),

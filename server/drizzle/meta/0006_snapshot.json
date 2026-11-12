@@ -185,6 +185,13 @@
           "notNull": true,
           "default": "'pending'"
         },
+        "is_demo": {
+          "name": "is_demo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "false"
+        },
         "subtotal": {
           "name": "subtotal",
           "type": "numeric(12, 2)",

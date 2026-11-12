@@ -478,7 +478,7 @@ Follow the phases in order unless a dependency requires a justified change.
 
 ### Phase 7 — Payments
 
-- [ ] Select a payment provider
+- [ ] Select a payment provider (deferred; current goal is a portfolio demo)
 - [ ] Configure provider credentials securely
 - [ ] Initialize payments on the backend
 - [ ] Verify payments server-side
@@ -486,6 +486,11 @@ Follow the phases in order unless a dependency requires a justified change.
 - [ ] Handle failed and pending payments
 - [ ] Implement idempotency
 - [ ] Test the payment lifecycle in the provider's test environment
+
+The current checkout is a clearly labeled portfolio simulation, not a payment
+integration. Demo orders remain pending and do not reduce inventory. Keep real
+payment credentials and live payment processing out of scope until the project
+is intended to accept actual orders.
 
 ### Phase 8 — Customer and admin dashboards
 
@@ -602,18 +607,20 @@ A successful type-check alone does not prove that a feature works correctly.
 
 ## 14. CURRENT NEXT ACTIONS
 
-Work through these actions in order:
+The original foundation checklist is stale; several listed capabilities have
+since been implemented. Verify the current repository and update phase checklists
+before using them as a progress tracker. For the portfolio-demo direction:
 
-1. Review the current repository structure and existing scripts.
-2. Confirm the latest schema and migration files are consistent.
-3. Review the server's environment-variable loading and development startup.
-4. Establish a clean Express application and error-handling foundation without breaking the current health endpoint.
-5. Add the first backend tests.
-6. Implement authentication and authorization.
-7. Build the product and category APIs.
-8. Continue through the phases above.
+1. Finish and verify demo checkout: save orders as demos, preserve inventory,
+   and show order history only to the signed-in customer.
+2. Verify production builds and test the deployed demo with the flags documented
+   above; keep them disabled until the database migration is applied.
+3. Implement and verify the customer order-history experience and the remaining
+   admin workflows.
+4. Revisit real payment integration only if the project later needs to accept
+   actual payments.
 
-Do not begin all phases at once. Complete and verify one focused task before moving to the next.
+Complete and verify one focused task before moving to the next.
 
 ---
 

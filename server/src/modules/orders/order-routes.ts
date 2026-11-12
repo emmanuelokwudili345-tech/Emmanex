@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { Router, type RequestHandler } from "express";
 import { successResponse } from "../../api-response.js";
 import { getAuthConfig } from "../../config/env.js";
@@ -8,7 +8,7 @@ import { HttpError } from "../../middleware/error-handler.js";
 import { requireNeonAuth } from "../auth/neon-auth-middleware.js";
 import { findShippingOption, shippingOptions } from "./shipping-options.js";
 
-export type MockPaymentOutcome = "success" | "failure";
+export type DemoCheckoutOutcome = "success" | "failure";
 
 export interface DeliveryDetails {
   recipientName: string;
@@ -22,10 +22,12 @@ export interface DeliveryDetails {
 
 export interface OrderConfirmation {
   id: string;
-  status: "confirmed";
+  status: CustomerOrderStatus;
+  isDemo: boolean;
   subtotal: string;
   shippingFee: string;
   total: string;
+  createdAt: string;
   items: Array<{
     productName: string;
     unitPrice: string;
@@ -34,16 +36,27 @@ export interface OrderConfirmation {
   }>;
 }
 
+export type CustomerOrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
+export type CustomerOrder = OrderConfirmation
+
 export interface OrderDependencies {
   findCustomer(neonAuthUserId: string): Promise<{ id: string } | undefined>;
-  createSuccessfulMockOrder(input: {
+  listCustomerOrders(userId: string): Promise<CustomerOrder[]>;
+  createDemoOrder(input: {
     userId: string;
     delivery: DeliveryDetails;
   }): Promise<OrderConfirmation>;
 }
 
 interface CheckoutRequest extends DeliveryDetails {
-  mockPaymentOutcome: MockPaymentOutcome;
+  demoOutcome: DemoCheckoutOutcome;
 }
 
 function requiredText(value: unknown, field: string, maxLength: number): string {
@@ -74,8 +87,8 @@ function parseCheckoutRequest(value: unknown): CheckoutRequest {
   const shippingOption = findShippingOption(state);
   if (!shippingOption) throw new HttpError(400, "Choose a valid Nigerian state or territory.");
 
-  if (body.mockPaymentOutcome !== "success" && body.mockPaymentOutcome !== "failure") {
-    throw new HttpError(400, "Choose a mock payment outcome.");
+  if (body.demoOutcome !== "success" && body.demoOutcome !== "failure") {
+    throw new HttpError(400, "Choose a demo checkout outcome.");
   }
 
   const phone = requiredText(body.phone, "Phone number", 30);
@@ -91,7 +104,7 @@ function parseCheckoutRequest(value: unknown): CheckoutRequest {
     city: requiredText(body.city, "City", 100),
     state: shippingOption.state,
     postalCode: optionalText(body.postalCode, "Postal code", 20),
-    mockPaymentOutcome: body.mockPaymentOutcome,
+    demoOutcome: body.demoOutcome,
   };
 }
 
@@ -116,7 +129,63 @@ function createProductionDependencies(): OrderDependencies {
       return customer ? { id: customer.id } : undefined;
     },
 
-    async createSuccessfulMockOrder({ userId, delivery }) {
+    async listCustomerOrders(userId) {
+      const rows = await db.select({
+        id: orders.id,
+        status: orders.status,
+        isDemo: orders.isDemo,
+        subtotal: orders.subtotal,
+        shippingFee: orders.shippingFee,
+        total: orders.total,
+        createdAt: orders.createdAt,
+        productName: orderItems.productName,
+        unitPrice: orderItems.unitPrice,
+        quantity: orderItems.quantity,
+        lineTotal: orderItems.lineTotal,
+      })
+        .from(orders)
+        .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+        .where(eq(orders.userId, userId))
+        .orderBy(desc(orders.createdAt), asc(orderItems.id));
+
+      const customerOrders = new Map<string, CustomerOrder>();
+
+      for (const row of rows) {
+        let order = customerOrders.get(row.id);
+
+        if (!order) {
+          order = {
+            id: row.id,
+            status: row.status,
+            isDemo: row.isDemo,
+            subtotal: row.subtotal,
+            shippingFee: row.shippingFee,
+            total: row.total,
+            createdAt: row.createdAt.toISOString(),
+            items: [],
+          };
+          customerOrders.set(row.id, order);
+        }
+
+        if (
+          row.productName !== null &&
+          row.unitPrice !== null &&
+          row.quantity !== null &&
+          row.lineTotal !== null
+        ) {
+          order.items.push({
+            productName: row.productName,
+            unitPrice: row.unitPrice,
+            quantity: row.quantity,
+            lineTotal: row.lineTotal,
+          });
+        }
+      }
+
+      return [...customerOrders.values()];
+    },
+
+    async createDemoOrder({ userId, delivery }) {
       const shipping = findShippingOption(delivery.state);
       if (!shipping) throw new HttpError(400, "Choose a valid Nigerian state or territory.");
       const shippingCents = toCents(shipping.shippingFee);
@@ -163,7 +232,8 @@ function createProductionDependencies(): OrderDependencies {
 
         const [order] = await tx.insert(orders).values({
           userId,
-          status: "confirmed",
+          status: "pending",
+          isDemo: true,
           subtotal,
           shippingFee,
           total,
@@ -175,21 +245,10 @@ function createProductionDependencies(): OrderDependencies {
           state: delivery.state,
           postalCode: delivery.postalCode,
           country: "Nigeria",
-        }).returning({ id: orders.id });
-
-        for (const item of itemSnapshots) {
-          const [updatedProduct] = await tx.update(products)
-            .set({ stock: sql`${products.stock} - ${item.quantity}`, updatedAt: new Date() })
-            .where(and(
-              eq(products.id, item.productId),
-              eq(products.isActive, true),
-              gte(products.stock, item.quantity),
-            ))
-            .returning({ id: products.id });
-          if (!updatedProduct) {
-            throw new HttpError(409, `There is not enough stock for ${item.productName}.`);
-          }
-        }
+        }).returning({
+          id: orders.id,
+          createdAt: orders.createdAt,
+        });
 
         await tx.insert(orderItems).values(itemSnapshots.map((item) => ({
           orderId: order.id,
@@ -203,10 +262,12 @@ function createProductionDependencies(): OrderDependencies {
 
         return {
           id: order.id,
-          status: "confirmed",
+          status: "pending",
+          isDemo: true,
           subtotal,
           shippingFee,
           total,
+          createdAt: order.createdAt.toISOString(),
           items: itemSnapshots.map(({ productName, unitPrice, quantity, lineTotal }) => ({
             productName,
             unitPrice,
@@ -222,7 +283,7 @@ function createProductionDependencies(): OrderDependencies {
 export function createOrderRouter(
   dependencies: OrderDependencies = createProductionDependencies(),
   authenticate: RequestHandler = requireNeonAuth(getAuthConfig()),
-  mockPaymentsEnabled = process.env.NODE_ENV !== "production",
+  demoCheckoutEnabled = process.env.DEMO_CHECKOUT_ENABLED === "true",
 ) {
   const router = Router();
 
@@ -230,15 +291,28 @@ export function createOrderRouter(
     res.json(successResponse("Shipping options retrieved.", { options: shippingOptions }));
   });
 
+  router.get("/orders", authenticate, async (req, res, next) => {
+    try {
+      const neonAuthUserId = req.neonAuthUser?.id;
+      if (!neonAuthUserId) throw new HttpError(401, "Authentication is required.");
+      const customer = await dependencies.findCustomer(neonAuthUserId);
+      if (!customer) throw new HttpError(409, "Your customer profile is not ready. Please refresh and try again.");
+      const orders = await dependencies.listCustomerOrders(customer.id);
+      res.json(successResponse("Order history retrieved.", { orders }));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post("/orders", authenticate, async (req, res, next) => {
     try {
-      if (!mockPaymentsEnabled) {
-        throw new HttpError(503, "Checkout is unavailable until a payment provider is configured.");
+      if (!demoCheckoutEnabled) {
+        throw new HttpError(503, "Demo checkout is disabled.");
       }
 
       const checkout = parseCheckoutRequest(req.body);
-      if (checkout.mockPaymentOutcome === "failure") {
-        throw new HttpError(402, "The payment simulation failed. Your bag and inventory were not changed.");
+      if (checkout.demoOutcome === "failure") {
+        throw new HttpError(402, "The demo checkout failed. No order was saved and inventory was not changed.");
       }
 
       const neonAuthUserId = req.neonAuthUser?.id;
@@ -246,7 +320,7 @@ export function createOrderRouter(
       const customer = await dependencies.findCustomer(neonAuthUserId);
       if (!customer) throw new HttpError(409, "Your customer profile is not ready. Please refresh and try again.");
 
-      const order = await dependencies.createSuccessfulMockOrder({
+      const order = await dependencies.createDemoOrder({
         userId: customer.id,
         delivery: {
           recipientName: checkout.recipientName,
@@ -259,7 +333,7 @@ export function createOrderRouter(
         },
       });
 
-      res.status(201).json(successResponse("Mock payment succeeded and your order was placed.", { order }));
+      res.status(201).json(successResponse("Demo order saved. No payment was collected.", { order }));
     } catch (error) {
       next(error);
     }

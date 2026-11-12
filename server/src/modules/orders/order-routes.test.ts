@@ -12,10 +12,12 @@ import {
 
 const mockOrder: OrderConfirmation = {
   id: "order-123",
-  status: "confirmed",
+  status: "pending",
+  isDemo: true,
   subtotal: "10000.00",
   shippingFee: "2500.00",
   total: "12500.00",
+  createdAt: "2026-11-11T00:00:00.000Z",
   items: [{ productName: "Test product", unitPrice: "10000.00", quantity: 1, lineTotal: "10000.00" }],
 };
 
@@ -27,7 +29,7 @@ const checkoutBody = {
   city: "Ikeja",
   state: "Lagos",
   postalCode: "100001",
-  mockPaymentOutcome: "success",
+  demoOutcome: "success",
 };
 
 const authenticate: RequestHandler = (req, _res, next) => {
@@ -45,11 +47,11 @@ afterEach(async () => {
 
 async function startOrderServer(
   dependencies: OrderDependencies,
-  mockPaymentsEnabled = true,
+  demoCheckoutEnabled = true,
 ) {
   const app = express();
   app.use(express.json());
-  app.use("/api", createOrderRouter(dependencies, authenticate, mockPaymentsEnabled));
+  app.use("/api", createOrderRouter(dependencies, authenticate, demoCheckoutEnabled));
   app.use(errorHandler);
   const server = createServer(app);
   servers.push(server);
@@ -62,7 +64,8 @@ async function startOrderServer(
 function createDependencies(overrides: Partial<OrderDependencies> = {}) {
   return {
     findCustomer: async () => ({ id: "customer-123" }),
-    createSuccessfulMockOrder: async () => mockOrder,
+    listCustomerOrders: async () => [],
+    createDemoOrder: async () => mockOrder,
     ...overrides,
   } satisfies OrderDependencies;
 }
@@ -78,10 +81,10 @@ test("shipping options return the starter zone fees", async () => {
   assert.equal(body.data.options.find((option: { state: string }) => option.state === "Federal Capital Territory").shippingFee, "6500.00");
 });
 
-test("successful mock payment creates an order and returns its server totals", async () => {
-  let receivedInput: Parameters<OrderDependencies["createSuccessfulMockOrder"]>[0] | undefined;
+test("successful demo checkout saves an unpaid demo order and returns server totals", async () => {
+  let receivedInput: Parameters<OrderDependencies["createDemoOrder"]>[0] | undefined;
   const dependencies = createDependencies({
-    createSuccessfulMockOrder: async (input) => {
+    createDemoOrder: async (input) => {
       receivedInput = input;
       return mockOrder;
     },
@@ -95,15 +98,18 @@ test("successful mock payment creates an order and returns its server totals", a
   const body = await response.json();
 
   assert.equal(response.status, 201);
+  assert.equal(body.message, "Demo order saved. No payment was collected.");
   assert.equal(body.data.order.total, "12500.00");
+  assert.equal(body.data.order.status, "pending");
+  assert.equal(body.data.order.isDemo, true);
   assert.equal(receivedInput?.userId, "customer-123");
   assert.equal(receivedInput?.delivery.state, "Lagos");
 });
 
-test("failed mock payment leaves order creation untouched", async () => {
+test("failed demo checkout leaves order creation untouched", async () => {
   let createOrderCalled = false;
   const dependencies = createDependencies({
-    createSuccessfulMockOrder: async () => {
+    createDemoOrder: async () => {
       createOrderCalled = true;
       return mockOrder;
     },
@@ -112,12 +118,12 @@ test("failed mock payment leaves order creation untouched", async () => {
   const response = await fetch(`${baseUrl}/api/orders`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ...checkoutBody, mockPaymentOutcome: "failure" }),
+    body: JSON.stringify({ ...checkoutBody, demoOutcome: "failure" }),
   });
   const body = await response.json();
 
   assert.equal(response.status, 402);
-  assert.match(body.message, /bag and inventory were not changed/);
+  assert.match(body.message, /No order was saved and inventory was not changed/);
   assert.equal(createOrderCalled, false);
 });
 
@@ -132,10 +138,10 @@ test("checkout rejects unknown delivery states", async () => {
   assert.equal(response.status, 400);
 });
 
-test("mock checkout is disabled when the server does not allow simulations", async () => {
+test("demo checkout is disabled when the server does not allow it", async () => {
   let createOrderCalled = false;
   const dependencies = createDependencies({
-    createSuccessfulMockOrder: async () => {
+    createDemoOrder: async () => {
       createOrderCalled = true;
       return mockOrder;
     },
@@ -149,4 +155,21 @@ test("mock checkout is disabled when the server does not allow simulations", asy
 
   assert.equal(response.status, 503);
   assert.equal(createOrderCalled, false);
+});
+
+test("order history is scoped to the signed-in customer", async () => {
+  let requestedCustomerId: string | undefined;
+  const dependencies = createDependencies({
+    listCustomerOrders: async (userId) => {
+      requestedCustomerId = userId;
+      return [mockOrder];
+    },
+  });
+  const baseUrl = await startOrderServer(dependencies);
+  const response = await fetch(`${baseUrl}/api/orders`);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(requestedCustomerId, "customer-123");
+  assert.deepEqual(body.data.orders, [mockOrder]);
 });

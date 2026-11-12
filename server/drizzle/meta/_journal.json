@@ -50,6 +50,13 @@
       "when": 1793610000000,
       "tag": "0006_persistent_shopping",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794450000000,
+      "tag": "0007_demo_orders",
+      "breakpoints": true
     }
   ]
 }

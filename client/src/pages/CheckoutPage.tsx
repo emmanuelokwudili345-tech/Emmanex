@@ -12,7 +12,11 @@ import {
   type ShippingOption,
 } from '../services/shoppingApi'
 
-type DeliveryForm = Omit<CheckoutDetails, 'mockPaymentOutcome'>
+const demoCheckoutEnabled =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_DEMO_CHECKOUT_ENABLED === 'true'
+
+type DeliveryForm = Omit<CheckoutDetails, 'demoOutcome'>
 
 const emptyDelivery: DeliveryForm = {
   recipientName: '',
@@ -29,7 +33,7 @@ export function CheckoutPage() {
   const { showToast } = useToast()
   const [delivery, setDelivery] = useState<DeliveryForm>(emptyDelivery)
   const [options, setOptions] = useState<ShippingOption[]>([])
-  const [optionsLoading, setOptionsLoading] = useState(true)
+  const [optionsLoading, setOptionsLoading] = useState(demoCheckoutEnabled)
   const [optionsError, setOptionsError] = useState('')
   const [paymentOutcome, setPaymentOutcome] = useState<'success' | 'failure'>('success')
   const [submitting, setSubmitting] = useState(false)
@@ -37,14 +41,11 @@ export function CheckoutPage() {
   const [retryOptions, setRetryOptions] = useState(0)
 
   useEffect(() => {
-    if (!import.meta.env.DEV) {
-      setOptionsLoading(false)
+    if (!demoCheckoutEnabled) {
       return
     }
 
     const controller = new AbortController()
-    setOptionsLoading(true)
-    setOptionsError('')
     shoppingApi.getShippingOptions()
       .then((shippingOptions) => {
         if (!controller.signal.aborted) setOptions(shippingOptions)
@@ -70,16 +71,16 @@ export function CheckoutPage() {
     setSubmitting(true)
 
     try {
-      const order = await shoppingApi.submitMockOrder({
+      const order = await shoppingApi.submitDemoOrder({
         ...delivery,
-        mockPaymentOutcome: paymentOutcome,
+        demoOutcome: paymentOutcome,
       })
       setConfirmation(order)
       void refreshCart().catch(() => undefined)
     } catch (error) {
       showToast({
         type: 'error',
-        title: 'Could not place your test order',
+        title: 'Could not save your demo order',
         message: error instanceof Error ? error.message : 'Please try again.',
       })
     } finally {
@@ -96,25 +97,26 @@ export function CheckoutPage() {
         <SiteHeader />
       </div>
 
-      {!import.meta.env.DEV ? (
+      {!demoCheckoutEnabled ? (
         <main className="state-screen checkout-placeholder">
           <div className="state-icon" aria-hidden="true"><CreditCard size={22} /></div>
           <p className="eyebrow">Checkout unavailable</p>
-          <h1>Online payment is not configured</h1>
-          <p>Checkout will open when a payment provider is configured.</p>
+          <h1>Demo checkout is disabled</h1>
+          <p>Checkout is not enabled for this deployment. No payment has been taken.</p>
           <Link className="button button-dark" to="/cart">Back to your bag</Link>
         </main>
       ) : confirmation ? (
         <main className="shopping-page checkout-page">
           <section className="checkout-confirmation" role="status">
             <CheckCircle2 size={38} aria-hidden="true" />
-            <p className="store-eyebrow">DEVELOPMENT PAYMENT SIMULATION</p>
-            <h1>Your order is confirmed</h1>
-            <p>Mock payment succeeded. No real payment was collected.</p>
+            <p className="store-eyebrow">DEMO ORDER · NO PAYMENT COLLECTED</p>
+            <h1>Your demo order is saved</h1>
+            <p>This is a portfolio demonstration. No money was collected and inventory was not changed.</p>
             <div className="checkout-confirmation-details">
               <span>Order reference</span><strong>{confirmation.id}</strong>
               <span>Order total</span><strong>{formatNaira(Number(confirmation.total))}</strong>
             </div>
+            <Link className="text-link" to="/account">View your order history</Link>
             <Link className="button button-dark" to="/">Continue shopping</Link>
           </section>
         </main>
@@ -126,7 +128,7 @@ export function CheckoutPage() {
               <p className="store-eyebrow">DELIVERY AND PAYMENT</p>
               <h1>Checkout</h1>
             </div>
-            <span>Development simulation</span>
+            <span>Demo checkout · no real payment</span>
           </div>
 
           {!cartLoading && !cartError && items.length === 0 ? (
@@ -191,7 +193,16 @@ export function CheckoutPage() {
                   {optionsError && (
                     <div className="checkout-error" role="alert">
                       <p>{optionsError}</p>
-                      <button type="button" onClick={() => setRetryOptions((current) => current + 1)}>Retry</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOptionsLoading(true)
+                          setOptionsError('')
+                          setRetryOptions((current) => current + 1)
+                        }}
+                      >
+                        Retry
+                      </button>
                     </div>
                   )}
                   {selectedShipping && (
@@ -202,23 +213,23 @@ export function CheckoutPage() {
                 <section className="checkout-card">
                   <div className="checkout-card-heading">
                     <span className="checkout-step">02</span>
-                    <div><h2>Payment simulation</h2><p>Choose a test outcome. No real payment will be collected.</p></div>
+                    <div><h2>Demo payment simulation</h2><p>Choose a test outcome. No real payment will be collected.</p></div>
                   </div>
                   <fieldset className="mock-payment-options">
-                    <legend>Simulated result</legend>
+                    <legend>Demo result</legend>
                     <label>
-                      <input type="radio" name="mockPaymentOutcome" value="success" checked={paymentOutcome === 'success'} onChange={() => setPaymentOutcome('success')} />
-                      <span><strong>Simulate success</strong><small>Place the order and reserve the items.</small></span>
+                      <input type="radio" name="demoOutcome" value="success" checked={paymentOutcome === 'success'} onChange={() => setPaymentOutcome('success')} />
+                      <span><strong>Save demo order</strong><small>No payment is collected and inventory stays unchanged.</small></span>
                     </label>
                     <label>
-                      <input type="radio" name="mockPaymentOutcome" value="failure" checked={paymentOutcome === 'failure'} onChange={() => setPaymentOutcome('failure')} />
+                      <input type="radio" name="demoOutcome" value="failure" checked={paymentOutcome === 'failure'} onChange={() => setPaymentOutcome('failure')} />
                       <span><strong>Simulate failure</strong><small>Keep your bag and inventory unchanged.</small></span>
                     </label>
                   </fieldset>
                 </section>
 
                 <button className="button button-dark checkout-submit" type="submit" disabled={submitting || optionsLoading || Boolean(optionsError) || !selectedShipping}>
-                  {submitting ? 'Processing simulation…' : 'Place test order'}
+                  {submitting ? 'Saving demo order…' : 'Place demo order'}
                 </button>
               </form>
 
@@ -235,7 +246,7 @@ export function CheckoutPage() {
                 <div><span>Subtotal</span><strong>{formatNaira(Number(subtotal))}</strong></div>
                 <div><span>Delivery</span><strong>{selectedShipping ? formatNaira(Number(selectedShipping.shippingFee)) : 'Choose a state'}</strong></div>
                 <div className="checkout-total"><span>Total</span><strong>{formatNaira(total)}</strong></div>
-                <p>Final totals are recalculated by the server when the test order is placed.</p>
+                <p>Final totals are recalculated by the server. Demo orders do not reduce inventory.</p>
               </aside>
             </div>
           )}

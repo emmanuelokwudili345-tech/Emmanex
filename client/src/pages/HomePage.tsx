@@ -670,7 +670,7 @@ export function HomePage() {
             {user ? (
               <Link to="/account">My account</Link>
             ) : (
-              <Link to="/login">Sign in</Link>
+              <Link to="/privacy-policy">Privacy Policy</Link>
             )}
           </div>
         </div>
