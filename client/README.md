@@ -18,6 +18,10 @@ For a deployed frontend, set `VITE_API_BASE_URL` to the backend API base URL,
 including `/api` (for example, `https://api.example.com/api`). This value is
 public client configuration and must not contain secrets.
 
+Deploy the Vercel project with `client` as its root directory. The Vercel
+rewrite in `vercel.json` serves the React app for client-side routes such as
+`/login` and `/verify-email`, including direct visits and page refreshes.
+
 Set `VITE_NEON_AUTH_URL` to your Neon Auth URL. The client also accepts
 `VITE_NEON_AUTH_BASE_URL` for compatibility with deployments that already use
 that variable name. This is a public URL, not a secret. The deployed client
