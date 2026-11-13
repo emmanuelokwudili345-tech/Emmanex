@@ -104,10 +104,12 @@ export function AccountPage() {
                 {orders.map((order) => (
                   <article className="order-history-item" key={order.id}>
                     <div className="order-history-heading">
-                      <strong>Order {order.id.slice(0, 8).toUpperCase()}</strong>
+                      <Link to={`/order-confirmation/${encodeURIComponent(order.id)}`}>
+                        Order {order.id.slice(0, 8).toUpperCase()}
+                      </Link>
                       <span>
                         {order.isDemo
-                          ? 'DEMO · NOT PAID'
+                          ? 'DEMO · NO PAYMENT COLLECTED'
                           : order.status.toUpperCase()}
                       </span>
                     </div>

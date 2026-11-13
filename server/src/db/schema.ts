@@ -81,38 +81,50 @@ export const orderStatusEnum = pgEnum("order_status", [
   "cancelled",
 ]);
 
-export const orders = pgTable("orders", {
-  id: uuid("id").defaultRandom().primaryKey(),
+export const orders = pgTable(
+  "orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
 
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "restrict" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
 
-  status: orderStatusEnum("status").notNull().default("pending"),
-  isDemo: boolean("is_demo").notNull().default(false),
+    status: orderStatusEnum("status").notNull().default("pending"),
+    isDemo: boolean("is_demo").notNull().default(false),
 
-  subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
-  shippingFee: numeric("shipping_fee", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"),
-  total: numeric("total", { precision: 12, scale: 2 }).notNull(),
+    subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
+    shippingFee: numeric("shipping_fee", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    total: numeric("total", { precision: 12, scale: 2 }).notNull(),
 
-  recipientName: varchar("recipient_name", { length: 200 }).notNull(),
-  phone: varchar("phone", { length: 30 }).notNull(),
-  addressLine1: varchar("address_line1", { length: 255 }).notNull(),
-  addressLine2: varchar("address_line2", { length: 255 }),
-  city: varchar("city", { length: 100 }).notNull(),
-  state: varchar("state", { length: 100 }).notNull(),
-  postalCode: varchar("postal_code", { length: 20 }),
-  country: varchar("country", { length: 100 }).notNull().default("Nigeria"),
+    recipientName: varchar("recipient_name", { length: 200 }).notNull(),
+    recipientEmail: varchar("recipient_email", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 30 }).notNull(),
+    addressLine1: varchar("address_line1", { length: 255 }).notNull(),
+    addressLine2: varchar("address_line2", { length: 255 }),
+    city: varchar("city", { length: 100 }).notNull(),
+    state: varchar("state", { length: 100 }).notNull(),
+    postalCode: varchar("postal_code", { length: 20 }),
+    country: varchar("country", { length: 100 }).notNull().default("Nigeria"),
+    deliveryMethod: varchar("delivery_method", { length: 40 }).notNull().default("standard"),
+    paymentMethod: varchar("payment_method", { length: 40 }).notNull().default("unknown"),
+    paymentStatus: varchar("payment_status", { length: 40 }).notNull().default("unknown"),
 
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check("orders_delivery_method_valid", sql`${table.deliveryMethod} IN ('standard')`),
+    check("orders_payment_method_valid", sql`${table.paymentMethod} IN ('unknown', 'demo')`),
+    check("orders_payment_status_valid", sql`${table.paymentStatus} IN ('unknown', 'simulated')`),
+  ],
+);
 
 export const orderItems = pgTable(
   "order_items",

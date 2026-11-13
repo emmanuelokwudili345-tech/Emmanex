@@ -487,10 +487,11 @@ Follow the phases in order unless a dependency requires a justified change.
 - [ ] Implement idempotency
 - [ ] Test the payment lifecycle in the provider's test environment
 
-The current checkout is a clearly labeled portfolio simulation, not a payment
-integration. Demo orders remain pending and do not reduce inventory. Keep real
-payment credentials and live payment processing out of scope until the project
-is intended to accept actual orders.
+Checkout is an authenticated e-commerce demonstration: delivery details,
+server-calculated totals, transactional order persistence, confirmation, and
+customer-scoped order history are required. The demo payment status is
+simulated, and no gateway, financial credentials, or real transaction is used.
+Demo orders remain pending and do not reduce inventory.
 
 ### Phase 8 — Customer and admin dashboards
 
@@ -611,14 +612,14 @@ The original foundation checklist is stale; several listed capabilities have
 since been implemented. Verify the current repository and update phase checklists
 before using them as a progress tracker. For the portfolio-demo direction:
 
-1. Finish and verify demo checkout: save orders as demos, preserve inventory,
-   and show order history only to the signed-in customer.
-2. Verify production builds and test the deployed demo with the flags documented
-   above; keep them disabled until the database migration is applied.
-3. Implement and verify the customer order-history experience and the remaining
-   admin workflows.
-4. Revisit real payment integration only if the project later needs to accept
-   actual payments.
+1. Apply migration `0008_checkout_details` to Neon and verify the new order
+   columns.
+2. Run server tests/typecheck and client lint/build; then exercise an authenticated
+   checkout against the deployed API and confirm the saved order in history.
+3. Continue the remaining admin workflows and checkout reliability work,
+   including duplicate-submission protection.
+4. Keep real payment processing out of scope unless the project later needs to
+   accept actual payments.
 
 Complete and verify one focused task before moving to the next.
 

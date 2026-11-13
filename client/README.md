@@ -34,17 +34,19 @@ the frontend's own `/api` path. Check that
 `https://<your-backend-host>/api/health` returns the API health response and
 that `/api/health/ready` succeeds when the database is configured.
 
-For this portfolio project, apply the reviewed database migrations before
-enabling demo checkout. Then set `VITE_DEMO_CHECKOUT_ENABLED=true` in Vercel and
-`DEMO_CHECKOUT_ENABLED=true` in Render, and redeploy both services. Both flags
-must be enabled for checkout to work. Demo orders are saved as pending,
-explicitly marked as demos, and do not collect payment or reduce inventory.
-Leave both flags unset or false to keep deployed checkout disabled. This is
-not a real payment integration.
+Checkout is an authenticated shopping flow: customers review their bag, enter
+delivery details, select standard home delivery and a demo payment, and place an
+order. The server validates current cart contents and calculates the final
+subtotal, delivery fee, and total before it saves the order and item snapshots
+transactionally. Demo payment confirmation is recorded for the order, but no
+payment gateway is contacted and no financial details or money are collected.
+Demo orders do not reduce inventory. Order confirmation is loaded from the
+customer-scoped order API and remains available from account order history.
 
-For local development, the client displays the demo checkout automatically;
-set `DEMO_CHECKOUT_ENABLED=true` in the server environment to allow the API to
-save demo orders.
+Apply database migrations from the `server` directory before deploying backend
+code that depends on a new schema. The checkout detail migration adds recipient
+email, delivery method, and demo payment method/status to existing orders while
+backfilling their email from the customer profile.
 
 The backend requires `DATABASE_URL`, `NEON_AUTH_BASE_URL`,
 `NEON_AUTH_JWKS_URL`, and `CORS_ORIGINS`. Set `CORS_ORIGINS` to the exact

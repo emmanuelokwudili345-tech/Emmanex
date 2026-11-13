@@ -1,5 +1,6 @@
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { CartPage } from './pages/CartPage'
+import { OrderConfirmationPage } from './pages/OrderConfirmationPage'
 import { WishlistPage } from './pages/WishlistPage'
 import { useLayoutEffect } from 'react'
 import {
@@ -50,6 +51,7 @@ function AppRoutes() {
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

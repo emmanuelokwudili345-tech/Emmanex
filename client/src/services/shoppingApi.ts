@@ -31,23 +31,37 @@ export interface ShippingOption {
 
 export interface CheckoutDetails {
   recipientName: string
+  recipientEmail: string
   phone: string
   addressLine1: string
   addressLine2: string
   city: string
   state: string
   postalCode: string
-  demoOutcome: 'success' | 'failure'
+  deliveryMethod: 'standard'
+  paymentMethod: 'demo'
 }
 
 export interface OrderConfirmation {
   id: string
-  status: 'pending'
-  isDemo: true
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  isDemo: boolean
   subtotal: string
   shippingFee: string
   total: string
   createdAt: string
+  recipientName: string
+  recipientEmail: string
+  phone: string
+  addressLine1: string
+  addressLine2: string | null
+  city: string
+  state: string
+  postalCode: string | null
+  country: string
+  deliveryMethod: string
+  paymentMethod: string
+  paymentStatus: string
   items: Array<{
     productName: string
     unitPrice: string
@@ -56,16 +70,7 @@ export interface OrderConfirmation {
   }>
 }
 
-export interface CustomerOrder {
-  id: string
-  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-  isDemo: boolean
-  subtotal: string
-  shippingFee: string
-  total: string
-  createdAt: string
-  items: OrderConfirmation['items']
-}
+export type CustomerOrder = OrderConfirmation
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
 
@@ -93,13 +98,13 @@ export const shoppingApi = {
   },
   async addCartItem(productId: string, quantity = 1): Promise<ShoppingCartData> {
     return request<ShoppingCartData>('/cart/items', {
-      method: 'POST', 
+      method: 'POST',
       body: JSON.stringify({ productId, quantity }),
     })
   },
   async updateCartItem(productId: string, quantity: number): Promise<ShoppingCartData> {
     return request<ShoppingCartData>(`/cart/items/${encodeURIComponent(productId)}`, {
-      method: 'PATCH', 
+      method: 'PATCH',
       body: JSON.stringify({ quantity }),
     })
   },
@@ -111,9 +116,10 @@ export const shoppingApi = {
     return data.items
   },
   async addWishlistItem(productId: string): Promise<void> {
-    await request('/wishlist/items', { 
-      method: 'POST', 
-      body: JSON.stringify({ productId }) })
+    await request('/wishlist/items', {
+      method: 'POST',
+      body: JSON.stringify({ productId }),
+    })
   },
   async removeWishlistItem(productId: string): Promise<void> {
     await request(`/wishlist/items/${encodeURIComponent(productId)}`, { method: 'DELETE' })
@@ -125,6 +131,10 @@ export const shoppingApi = {
   async getOrderHistory(): Promise<CustomerOrder[]> {
     const data = await request<{ orders: CustomerOrder[] }>('/orders')
     return data.orders
+  },
+  async getOrder(orderId: string): Promise<OrderConfirmation> {
+    const data = await request<{ order: OrderConfirmation }>(`/orders/${encodeURIComponent(orderId)}`)
+    return data.order
   },
   async submitDemoOrder(details: CheckoutDetails): Promise<OrderConfirmation> {
     const data = await request<{ order: OrderConfirmation }>('/orders', {
