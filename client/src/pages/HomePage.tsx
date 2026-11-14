@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   Truck,
 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
 import { ProductGrid, ProductGridSkeleton } from '../features/products/ProductGrid'
@@ -52,6 +52,7 @@ function getCategoryImage(slug: string): string {
 
 export function HomePage() {
   const { user } = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
   const { addItem } = useCart()
   const { isSaved, toggleItem } = useWishlist()
@@ -78,6 +79,19 @@ export function HomePage() {
 
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
+
+  useEffect(() => {
+    if (location.pathname !== '/' || !location.hash) return
+
+    const section = document.getElementById(location.hash.slice(1))
+    if (!section) return
+
+    const frame = window.requestAnimationFrame(() => {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [location.hash, location.key, location.pathname])
 
   useEffect(() => {
     const controller = new AbortController()
