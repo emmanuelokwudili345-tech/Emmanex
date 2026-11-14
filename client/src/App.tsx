@@ -1,5 +1,6 @@
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { CartPage } from './pages/CartPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { OrderConfirmationPage } from './pages/OrderConfirmationPage'
 import { WishlistPage } from './pages/WishlistPage'
 import { useLayoutEffect } from 'react'
@@ -18,6 +19,8 @@ import { ProductDetailsPage } from './pages/ProductDetailsPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import './App.css'
+import './customer-commerce.css'
+import './loading-states.css'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -50,6 +53,7 @@ function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
         </Route>

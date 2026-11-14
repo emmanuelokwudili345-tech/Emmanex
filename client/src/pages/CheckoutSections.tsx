@@ -1,5 +1,6 @@
 import { CreditCard, MapPin } from 'lucide-react'
 import { formatNaira } from '../lib/formatCurrency'
+import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import type {
   CheckoutDetails,
   ShoppingCartItem,
@@ -35,58 +36,58 @@ export function DeliveryDetailsSection({
         </div>
       </div>
 
-      <label>
-        Full name
-        <input
-          autoComplete="name"
-          maxLength={200}
-          required
-          value={details.recipientName}
-          onChange={(event) => onChange('recipientName', event.target.value)}
-        />
-      </label>
-      <label>
-        Email address
-        <input
-          autoComplete="email"
-          type="email"
-          maxLength={255}
-          required
-          value={details.recipientEmail}
-          onChange={(event) => onChange('recipientEmail', event.target.value)}
-        />
-      </label>
-      <label>
-        Phone number
-        <input
-          autoComplete="tel"
-          type="tel"
-          maxLength={30}
-          required
-          value={details.phone}
-          onChange={(event) => onChange('phone', event.target.value)}
-        />
-      </label>
-      <label>
-        Street address
-        <input
-          autoComplete="address-line1"
-          maxLength={255}
-          required
-          value={details.addressLine1}
-          onChange={(event) => onChange('addressLine1', event.target.value)}
-        />
-      </label>
-      <label>
-        Apartment, suite, etc. <span className="checkout-optional">Optional</span>
-        <input
-          autoComplete="address-line2"
-          maxLength={255}
-          value={details.addressLine2}
-          onChange={(event) => onChange('addressLine2', event.target.value)}
-        />
-      </label>
-      <div className="checkout-form-row">
+      <div className="checkout-fields-grid">
+        <label className="checkout-field-wide">
+          Full name
+          <input
+            autoComplete="name"
+            maxLength={200}
+            required
+            value={details.recipientName}
+            onChange={(event) => onChange('recipientName', event.target.value)}
+          />
+        </label>
+        <label>
+          Email address
+          <input
+            autoComplete="email"
+            type="email"
+            maxLength={255}
+            required
+            value={details.recipientEmail}
+            onChange={(event) => onChange('recipientEmail', event.target.value)}
+          />
+        </label>
+        <label>
+          Phone number
+          <input
+            autoComplete="tel"
+            type="tel"
+            maxLength={30}
+            required
+            value={details.phone}
+            onChange={(event) => onChange('phone', event.target.value)}
+          />
+        </label>
+        <label className="checkout-field-wide">
+          Street address
+          <input
+            autoComplete="address-line1"
+            maxLength={255}
+            required
+            value={details.addressLine1}
+            onChange={(event) => onChange('addressLine1', event.target.value)}
+          />
+        </label>
+        <label className="checkout-field-wide">
+          Apartment, suite, etc. <span className="checkout-optional">Optional</span>
+          <input
+            autoComplete="address-line2"
+            maxLength={255}
+            value={details.addressLine2}
+            onChange={(event) => onChange('addressLine2', event.target.value)}
+          />
+        </label>
         <label>
           City
           <input
@@ -111,18 +112,23 @@ export function DeliveryDetailsSection({
             ))}
           </select>
         </label>
+        <label>
+          Postal code <span className="checkout-optional">Optional</span>
+          <input
+            autoComplete="postal-code"
+            maxLength={20}
+            value={details.postalCode}
+            onChange={(event) => onChange('postalCode', event.target.value)}
+          />
+        </label>
       </div>
-      <label>
-        Postal code <span className="checkout-optional">Optional</span>
-        <input
-          autoComplete="postal-code"
-          maxLength={20}
-          value={details.postalCode}
-          onChange={(event) => onChange('postalCode', event.target.value)}
-        />
-      </label>
 
-      {loading && <p className="checkout-note" role="status">Loading delivery areas…</p>}
+      {loading && (
+        <div className="checkout-delivery-skeleton" role="status" aria-label="Loading delivery areas">
+          <LoadingSkeleton className="checkout-delivery-skeleton-line" />
+          <LoadingSkeleton className="checkout-delivery-skeleton-line checkout-delivery-skeleton-line-short" />
+        </div>
+      )}
       {error && (
         <div className="checkout-error" role="alert">
           <p>{error}</p>
@@ -214,6 +220,8 @@ interface CheckoutOrderSummaryProps {
   subtotal: string
   shippingFee: string | null
   total: number | null
+  submitting: boolean
+  canSubmit: boolean
 }
 
 export function CheckoutOrderSummary({
@@ -221,10 +229,18 @@ export function CheckoutOrderSummary({
   subtotal,
   shippingFee,
   total,
+  submitting,
+  canSubmit,
 }: CheckoutOrderSummaryProps) {
   return (
     <aside className="shopping-summary checkout-summary">
-      <p className="store-eyebrow">ORDER SUMMARY</p>
+      <div className="checkout-summary-heading">
+        <div>
+          <p className="customer-eyebrow">ORDER SUMMARY</p>
+          <h2>Your order</h2>
+        </div>
+        <span>{items.length} {items.length === 1 ? 'item' : 'items'}</span>
+      </div>
       <div className="checkout-summary-items">
         {items.map(({ product, quantity }) => (
           <div key={product.id}>
@@ -250,7 +266,17 @@ export function CheckoutOrderSummary({
           <dd>{total === null ? 'Choose a state' : formatNaira(total)}</dd>
         </div>
       </dl>
-      <p>Final totals are recalculated by the server. No financial transaction is made.</p>
+      <button
+        className="button checkout-place-order"
+        form="checkout-form"
+        type="submit"
+        disabled={submitting || !canSubmit}
+      >
+        {submitting ? 'Placing your order…' : 'Place your order'}
+      </button>
+      <p className="checkout-reassurance">
+        Demo payment only. Your order is saved securely; no money is collected.
+      </p>
     </aside>
   )
 }

@@ -1,15 +1,14 @@
-import type { SyntheticEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, ShoppingBag } from 'lucide-react'
 import type { CatalogProduct } from '../../services/catalogApi'
 import { formatNaira } from '../../lib/formatCurrency'
+import { ImageWithSkeleton } from '../../components/ImageWithSkeleton'
 
 type ProductCardProps = {
   product: CatalogProduct
   saved: boolean
   onAddToBag: (product: CatalogProduct) => void
   onToggleWishlist: (product: CatalogProduct) => void
-  onImageError: (event: SyntheticEvent<HTMLImageElement>) => void
 }
 
 const fallbackProductImage =
@@ -20,7 +19,6 @@ export function ProductCard({
   saved,
   onAddToBag,
   onToggleWishlist,
-  onImageError,
 }: ProductCardProps) {
   const image = product.imageUrl || fallbackProductImage
 
@@ -28,11 +26,10 @@ export function ProductCard({
     <article className="product-card">
       <div className="product-image-wrap">
         <Link className="product-image-link" to={`/products/${encodeURIComponent(product.slug)}`} aria-label={`View ${product.name}`}>
-          <img
+          <ImageWithSkeleton
             src={image}
             alt={product.name}
-            loading="lazy"
-            onError={onImageError}
+            fallbackSrc={fallbackProductImage}
           />
         </Link>
 

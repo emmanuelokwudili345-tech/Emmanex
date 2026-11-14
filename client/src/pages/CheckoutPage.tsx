@@ -3,6 +3,7 @@ import { ArrowLeft, PackageCheck } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth, type User } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
+import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { useToast } from '../components/useToast'
 import { useCart } from '../features/cart/useCart'
 import {
@@ -84,7 +85,7 @@ export function CheckoutPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (submitting) return
+    if (submitting || optionsLoading || optionsError || !selectedShipping) return
 
     setSubmitting(true)
 
@@ -147,13 +148,18 @@ export function CheckoutPage() {
           <ArrowLeft size={15} />
           Back to your bag
         </Link>
-        <div className="shopping-page-heading">
+        <div className="checkout-page-heading">
           <div>
-            <p className="store-eyebrow">DELIVERY AND PAYMENT</p>
+            <p className="customer-eyebrow">YOUR ORDER</p>
             <h1>Checkout</h1>
+            <p>Delivery details, then review your order before placing it.</p>
           </div>
-          <span>Demo payment only · no money collected</span>
         </div>
+        <ol className="checkout-progress" aria-label="Checkout steps">
+          <li className="is-current"><span>1</span>Delivery details</li>
+          <li><span>2</span>Review order</li>
+          <li><span>3</span>Confirmation</li>
+        </ol>
 
         {!cartLoading && !cartError && items.length === 0 ? (
           <section className="shopping-empty">
@@ -163,9 +169,35 @@ export function CheckoutPage() {
             <Link className="button button-dark" to="/">Explore the collection</Link>
           </section>
         ) : cartLoading ? (
-          <section className="shopping-empty" role="status">
-            <p>Loading your bag…</p>
-          </section>
+          <div className="checkout-layout checkout-loading-skeleton" role="status" aria-label="Loading your bag for checkout" aria-busy="true">
+            <div className="checkout-form" aria-hidden="true">
+              <section className="checkout-card">
+                <LoadingSkeleton className="checkout-skeleton-heading" />
+                <div className="checkout-skeleton-fields">
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <LoadingSkeleton
+                      className={`checkout-skeleton-field${index === 0 || index === 3 ? ' checkout-skeleton-field-wide' : ''}`}
+                      key={index}
+                    />
+                  ))}
+                </div>
+              </section>
+              <section className="checkout-card checkout-skeleton-method">
+                <LoadingSkeleton className="checkout-skeleton-heading" />
+                <LoadingSkeleton className="checkout-skeleton-option" />
+              </section>
+              <section className="checkout-card checkout-skeleton-method">
+                <LoadingSkeleton className="checkout-skeleton-heading" />
+                <LoadingSkeleton className="checkout-skeleton-option" />
+              </section>
+            </div>
+            <aside className="shopping-summary checkout-summary" aria-hidden="true">
+              <LoadingSkeleton className="checkout-skeleton-heading" />
+              <LoadingSkeleton className="checkout-skeleton-summary-row" />
+              <LoadingSkeleton className="checkout-skeleton-summary-row" />
+              <LoadingSkeleton className="checkout-skeleton-summary-button" />
+            </aside>
+          </div>
         ) : cartError ? (
           <section className="shopping-empty" role="alert">
             <h2>We couldn’t load your bag</h2>
@@ -180,7 +212,7 @@ export function CheckoutPage() {
           </section>
         ) : (
           <div className="checkout-layout">
-            <form className="checkout-form" onSubmit={handleSubmit}>
+            <form id="checkout-form" className="checkout-form" onSubmit={handleSubmit}>
               <DeliveryDetailsSection
                 details={delivery}
                 shippingOptions={shippingOptions}
@@ -195,13 +227,6 @@ export function CheckoutPage() {
                 onDeliveryMethodChange={(method) => updateDelivery('deliveryMethod', method)}
                 onPaymentMethodChange={(method) => updateDelivery('paymentMethod', method)}
               />
-              <button
-                className="button button-dark checkout-submit"
-                type="submit"
-                disabled={submitting || optionsLoading || Boolean(optionsError) || !selectedShipping}
-              >
-                {submitting ? 'Placing your order…' : 'Place order'}
-              </button>
             </form>
 
             <CheckoutOrderSummary
@@ -209,6 +234,8 @@ export function CheckoutPage() {
               subtotal={subtotal}
               shippingFee={shippingFee}
               total={total}
+              submitting={submitting}
+              canSubmit={!optionsLoading && !optionsError && Boolean(selectedShipping)}
             />
           </div>
         )}

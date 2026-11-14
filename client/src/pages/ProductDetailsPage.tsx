@@ -1,8 +1,10 @@
-import { useEffect, useState, type SyntheticEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, Heart, ShoppingBag } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
+import { ImageWithSkeleton } from '../components/ImageWithSkeleton'
+import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { useToast } from '../components/useToast'
 import { useCart } from '../features/cart/useCart'
 import { useWishlist } from '../features/wishlist/useWishlist'
@@ -69,13 +71,6 @@ export function ProductDetailsPage() {
     setQuantityState({ slug, value: Math.max(1, nextQuantity) })
   }
 
-  function handleImageError(event: SyntheticEvent<HTMLImageElement>) {
-    const image = event.currentTarget
-    if (image.dataset.fallbackApplied === 'true') return
-    image.dataset.fallbackApplied = 'true'
-    image.src = fallbackImage
-  }
-
   function handleAddToBag() {
     if (!product) return
 
@@ -133,9 +128,16 @@ export function ProductDetailsPage() {
         </Link>
 
         {loading ? (
-          <div className="product-details-state" role="status">
-            Loading product details…
-          </div>
+          <section className="product-details-layout product-details-skeleton" role="status" aria-label="Loading product details" aria-busy="true">
+            <LoadingSkeleton className="product-details-image-placeholder" />
+            <div className="product-details-copy">
+              <LoadingSkeleton className="product-skeleton-category" />
+              <LoadingSkeleton className="product-details-title-placeholder" />
+              <LoadingSkeleton className="product-skeleton-price" />
+              <LoadingSkeleton className="product-details-description-placeholder" />
+              <LoadingSkeleton className="product-details-action-placeholder" />
+            </div>
+          </section>
         ) : error || !product ? (
           <section className="product-details-state" role="alert">
             <h1>We couldn't find this product</h1>
@@ -147,10 +149,11 @@ export function ProductDetailsPage() {
         ) : (
           <section className="product-details-layout">
             <div className="product-details-image">
-              <img
+              <ImageWithSkeleton
                 src={product.imageUrl || fallbackImage}
                 alt={product.name}
-                onError={handleImageError}
+                fallbackSrc={fallbackImage}
+                loading="eager"
               />
             </div>
             <div className="product-details-copy">

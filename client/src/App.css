@@ -1465,6 +1465,7 @@
 
 .store-hero-visual::after {
   position: absolute;
+  z-index: 1;
   inset: 0;
   border-radius: 48% 48% 4px 4px;
   background: linear-gradient(180deg, transparent 55%, rgba(33, 25, 20, .12));

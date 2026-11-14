@@ -1,4 +1,3 @@
-import type { SyntheticEvent } from 'react'
 import { ArrowLeft, Heart } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
@@ -6,10 +5,8 @@ import { useToast } from '../components/useToast'
 import { SiteHeader } from '../components/SiteHeader'
 import { useCart } from '../features/cart/useCart'
 import { ProductCard } from '../features/products/ProductCard'
+import { ProductGridSkeleton } from '../features/products/ProductGrid'
 import { useWishlist } from '../features/wishlist/useWishlist'
-
-const fallbackImage =
-  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&q=85'
 
 export function WishlistPage() {
   const { user } = useAuth()
@@ -19,15 +16,6 @@ export function WishlistPage() {
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: '/wishlist' }} />
-  }
-
-  function handleImageError(event: SyntheticEvent<HTMLImageElement>) {
-    const image = event.currentTarget
-
-    if (image.dataset.fallbackApplied === 'true') return
-
-    image.dataset.fallbackApplied = 'true'
-    image.src = fallbackImage
   }
 
   function handleRemove(productName: string) {
@@ -67,9 +55,7 @@ export function WishlistPage() {
         </div>
 
         {isLoading ? (
-          <section className="shopping-empty" role="status">
-            <p>Loading your wishlist…</p>
-          </section>
+          <ProductGridSkeleton count={4} />
         ) : loadError && items.length === 0 ? (
           <section className="shopping-empty" role="alert">
             <Heart size={32} />
@@ -115,7 +101,6 @@ export function WishlistPage() {
                         showToast({ type: 'error', title: 'Could not add product', message: error instanceof Error ? error.message : 'Please try again.' })
                       })
                     }}
-                    onImageError={handleImageError}
                   />
                 ))}
               </div>

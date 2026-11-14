@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type SyntheticEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
   ArrowRight,
   ArrowUpRight,
@@ -13,11 +13,13 @@ import {
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { SiteHeader } from '../components/SiteHeader'
-import { ProductGrid } from '../features/products/ProductGrid'
+import { ProductGrid, ProductGridSkeleton } from '../features/products/ProductGrid'
 import { ProductPagination } from '../features/products/ProductPagination'
 import { useCart } from '../features/cart/useCart'
 import { useWishlist } from '../features/wishlist/useWishlist'
 import { useToast } from '../components/useToast'
+import { ImageWithSkeleton } from '../components/ImageWithSkeleton'
+import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import {
   catalogApi,
   type CatalogCategory,
@@ -65,6 +67,7 @@ export function HomePage() {
 
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categoriesError, setCategoriesError] = useState('')
+  const [categoryRetryKey, setCategoryRetryKey] = useState(0)
 
   // This also tracks requests started by user interactions.
   // It is not reset synchronously inside the effect.
@@ -82,11 +85,13 @@ export function HomePage() {
     catalogApi
       .getCategories(controller.signal)
       .then((data) => {
-        setCategories(data)
-        setCategoriesError('')
+        if (!controller.signal.aborted) {
+          setCategories(data)
+          setCategoriesError('')
+        }
       })
       .catch((error: unknown) => {
-        if (error instanceof Error && error.name !== 'AbortError') {
+        if (!controller.signal.aborted && error instanceof Error && error.name !== 'AbortError') {
           setCategoriesError(error.message)
         }
       })
@@ -97,7 +102,7 @@ export function HomePage() {
       })
 
     return () => controller.abort()
-  }, [])
+  }, [categoryRetryKey])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -111,12 +116,14 @@ export function HomePage() {
         signal: controller.signal,
       })
       .then((result) => {
-        setProducts(result.products)
-        setHasMoreProducts(result.pagination.hasMore)
-        setCatalogError('')
+        if (!controller.signal.aborted) {
+          setProducts(result.products)
+          setHasMoreProducts(result.pagination.hasMore)
+          setCatalogError('')
+        }
       })
       .catch((error: unknown) => {
-        if (error instanceof Error && error.name !== 'AbortError') {
+        if (!controller.signal.aborted && error instanceof Error && error.name !== 'AbortError') {
           setCatalogError(error.message)
           setProducts([])
           setHasMoreProducts(false)
@@ -159,8 +166,13 @@ export function HomePage() {
     }
   }
 
-  function selectCategory(categorySlug: string) {
+  function beginProductRequest() {
+    setCatalogError('')
     setProductsLoading(true)
+  }
+
+  function selectCategory(categorySlug: string) {
+    beginProductRequest()
     setActiveCategory(categorySlug)
     setPage(1)
     setSearchTerm('')
@@ -171,7 +183,7 @@ export function HomePage() {
   }
 
   function clearFilters() {
-    setProductsLoading(true)
+    beginProductRequest()
     setActiveCategory('all')
     setPage(1)
     setSearchTerm('')
@@ -189,23 +201,9 @@ export function HomePage() {
   }
 
   function handleSearchChange(value: string) {
-    setProductsLoading(true)
+    beginProductRequest()
     setSearchTerm(value)
     setPage(1)
-  }
-
-  function handleProductImageError(
-    event: SyntheticEvent<HTMLImageElement>,
-  ) {
-    const image = event.currentTarget
-
-    // Prevent repeatedly trying the same fallback image.
-    if (image.dataset.fallbackApplied === 'true') {
-      return
-    }
-
-    image.dataset.fallbackApplied = 'true'
-    image.src = fallbackProductImage
   }
 
   const activeCategoryName = categories.find(
@@ -213,7 +211,7 @@ export function HomePage() {
   )?.name
 
   function changePage(nextPage: number) {
-    setProductsLoading(true)
+    beginProductRequest()
     setPage(nextPage)
 
     document.getElementById('products')?.scrollIntoView({
@@ -287,10 +285,13 @@ export function HomePage() {
           </div>
 
           <div className="store-hero-visual">
-            <img
-              className="store-hero-image"
+            <ImageWithSkeleton
               src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1200&q=90"
               alt="Fashion and lifestyle pieces in a warm, neutral setting"
+              className="store-hero-image-frame"
+              imageClassName="store-hero-image"
+              fallbackSrc={fallbackProductImage}
+              loading="eager"
             />
 
             <div className="hero-image-label">
@@ -360,9 +361,35 @@ export function HomePage() {
             </p>
           </div>
 
-          <div className="category-grid">
-            {categoriesLoading ? null : categoriesError ? (
-              <p role="alert">{categoriesError}</p>
+          <div
+            className={`category-grid${categoriesLoading ? ' category-grid-skeleton' : ''}`}
+            role={categoriesLoading ? 'status' : undefined}
+            aria-label={categoriesLoading ? 'Loading categories' : undefined}
+            aria-busy={categoriesLoading}
+          >
+            {categoriesLoading ? (
+              Array.from({ length: 4 }, (_, index) => (
+                <div className="category-skeleton-card" key={index}>
+                  <LoadingSkeleton className="category-skeleton-image" />
+                  <LoadingSkeleton className="category-skeleton-title" />
+                  <LoadingSkeleton className="category-skeleton-description" />
+                </div>
+              ))
+            ) : categoriesError ? (
+              <div className="category-load-error" role="alert">
+                <p>{categoriesError}</p>
+                <button
+                  className="button button-dark"
+                  type="button"
+                  onClick={() => {
+                    setCategoriesError('')
+                    setCategoriesLoading(true)
+                    setCategoryRetryKey((current) => current + 1)
+                  }}
+                >
+                  Retry categories
+                </button>
+              </div>
             ) : categories.length === 0 ? (
               <p>No categories are available yet.</p>
             ) : (
@@ -379,10 +406,11 @@ export function HomePage() {
                   aria-pressed={activeCategory === category.slug}
                 >
                   <span className="category-image-wrap">
-                    <img
+                    <ImageWithSkeleton
                       src={getCategoryImage(category.slug)}
                       alt=""
                       loading="lazy"
+                      fallbackSrc={fallbackProductImage}
                     />
 
                     <span className="category-number">
@@ -448,8 +476,10 @@ export function HomePage() {
           </div>
 
           <div
-            className="product-filter-row"
+            className={`product-filter-row${categoriesLoading ? ' product-filter-row-loading' : ''}`}
             aria-label="Filter products by category"
+            aria-busy={categoriesLoading}
+            role={categoriesLoading ? 'status' : undefined}
           >
             <button
               className={`filter-chip ${
@@ -462,19 +492,23 @@ export function HomePage() {
               All finds
             </button>
 
-            {categories.map((category) => (
-              <button
-                className={`filter-chip ${
-                  activeCategory === category.slug ? 'active' : ''
-                }`}
-                key={category.id}
-                type="button"
-                onClick={() => selectCategory(category.slug)}
-                aria-pressed={activeCategory === category.slug}
-              >
-                {category.name}
-              </button>
-            ))}
+            {categoriesLoading
+              ? Array.from({ length: 3 }, (_, index) => (
+                  <LoadingSkeleton className="filter-chip-skeleton" key={index} />
+                ))
+              : categories.map((category) => (
+                  <button
+                    className={`filter-chip ${
+                      activeCategory === category.slug ? 'active' : ''
+                    }`}
+                    key={category.id}
+                    type="button"
+                    onClick={() => selectCategory(category.slug)}
+                    aria-pressed={activeCategory === category.slug}
+                  >
+                    {category.name}
+                  </button>
+                ))}
           </div>
 
           {catalogError ? (
@@ -486,26 +520,22 @@ export function HomePage() {
                 className="button button-dark"
                 type="button"
                 onClick={() => {
-                  setProductsLoading(true)
+                  setCatalogError('')
+                  beginProductRequest()
                   setRetryKey((current) => current + 1)
                 }}
               >
                 Try again
               </button>
             </div>
+          ) : productsLoading ? (
+            <ProductGridSkeleton count={12} />
           ) : products.length > 0 ? (
             <ProductGrid
               products={products}
               isSaved={isSaved}
               onAddToBag={addToBag}
               onToggleWishlist={handleWishlist}
-              onImageError={handleProductImageError}
-              loading={productsLoading}
-            />
-          ) : productsLoading ? (
-            <div
-              className="empty-products"
-              aria-hidden="true"
             />
           ) : (
             <div className="empty-products">
@@ -523,7 +553,7 @@ export function HomePage() {
             </div>
           )}
 
-          {!catalogError && products.length > 0 && (
+          {!catalogError && !productsLoading && products.length > 0 && (
             <ProductPagination
               page={page}
               hasMore={hasMoreProducts}
@@ -535,10 +565,10 @@ export function HomePage() {
 
         <section className="editorial-banner">
           <div className="editorial-image">
-            <img
+            <ImageWithSkeleton
               src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1100&q=85"
               alt="Calm, thoughtfully styled home interior"
-              loading="lazy"
+              fallbackSrc={fallbackProductImage}
             />
           </div>
 

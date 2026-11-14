@@ -5,6 +5,11 @@ import { useToast } from '../components/useToast'
 import { useCart } from '../features/cart/useCart'
 import { formatNaira } from '../lib/formatCurrency'
 import type { ShoppingCartItem } from '../services/shoppingApi'
+import { ImageWithSkeleton } from '../components/ImageWithSkeleton'
+import { LoadingSkeleton } from '../components/LoadingSkeleton'
+
+const fallbackCartImage =
+  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=300&q=80'
 
 interface CartItemRowProps {
   item: ShoppingCartItem
@@ -18,9 +23,11 @@ function CartItemRow({ item, onDecrease, onIncrease, onRemove }: CartItemRowProp
 
   return (
     <article className="shopping-item">
-      <img
-        src={product.imageUrl || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=300&q=80'}
+      <ImageWithSkeleton
+        className="shopping-item-image"
+        src={product.imageUrl || fallbackCartImage}
         alt={product.name}
+        fallbackSrc={fallbackCartImage}
       />
       <div className="shopping-item-info">
         <span>{product.category?.name ?? 'Emmanex collection'}</span>
@@ -147,13 +154,31 @@ export function CartPage() {
             <p className="store-eyebrow">YOUR SELECTION</p>
             <h1>Shopping bag</h1>
           </div>
-          <span>{items.length} {items.length === 1 ? 'product' : 'products'}</span>
+          <span>{isLoading ? 'Loading…' : `${items.length} ${items.length === 1 ? 'product' : 'products'}`}</span>
         </div>
 
         {isLoading ? (
-          <section className="shopping-empty" role="status">
-            <p>Loading your shopping bag…</p>
-          </section>
+          <div className="shopping-layout cart-loading-skeleton" role="status" aria-label="Loading your shopping bag" aria-busy="true">
+            <section className="shopping-items" aria-hidden="true">
+              {Array.from({ length: 2 }, (_, index) => (
+                <article className="shopping-item" key={index}>
+                  <LoadingSkeleton className="cart-skeleton-image" />
+                  <div className="cart-skeleton-copy">
+                    <LoadingSkeleton className="cart-skeleton-line cart-skeleton-short" />
+                    <LoadingSkeleton className="cart-skeleton-line cart-skeleton-name" />
+                    <LoadingSkeleton className="cart-skeleton-line cart-skeleton-price" />
+                    <LoadingSkeleton className="cart-skeleton-quantity" />
+                  </div>
+                  <LoadingSkeleton className="cart-skeleton-remove" />
+                </article>
+              ))}
+            </section>
+            <aside className="shopping-summary cart-skeleton-summary" aria-hidden="true">
+              <LoadingSkeleton className="cart-skeleton-line cart-skeleton-short" />
+              <LoadingSkeleton className="cart-skeleton-line" />
+              <LoadingSkeleton className="cart-skeleton-line cart-skeleton-button" />
+            </aside>
+          </div>
         ) : loadError && items.length === 0 ? (
           <section className="shopping-empty" role="alert">
             <ShoppingBag size={32} />
