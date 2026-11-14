@@ -40,6 +40,7 @@ export function NotificationsPage() {
 
   return (
     <>
+      <title>Notifications</title>
       <div className="store-header-shell">
         <SiteHeader />
       </div>

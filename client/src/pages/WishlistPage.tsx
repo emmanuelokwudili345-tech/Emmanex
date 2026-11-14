@@ -36,6 +36,7 @@ export function WishlistPage() {
 
   return (
     <>
+      <title>Wishlist</title>
       <div className="store-header-shell">
         <SiteHeader />
       </div>

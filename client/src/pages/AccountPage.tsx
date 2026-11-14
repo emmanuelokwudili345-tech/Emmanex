@@ -21,6 +21,7 @@ export function AccountPage() {
 
   return (
     <>
+      <title>My Account</title>
       <div className="store-header-shell">
         <SiteHeader />
       </div>

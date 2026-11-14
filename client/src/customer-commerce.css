@@ -210,7 +210,6 @@
   min-height: 46px;
   align-items: center;
   gap: 10px;
-  margin-top: auto;
   padding: 0 12px;
   border: 1px solid var(--commerce-line);
   border-radius: 8px;
@@ -227,6 +226,46 @@
 .store-menu-signin:hover {
   border-color: var(--commerce-accent);
   color: var(--commerce-accent-dark);
+}
+
+.store-menu-signout,
+.store-menu-auth-actions {
+  margin-top: auto;
+}
+
+.store-menu-auth-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.store-menu-signup {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid var(--commerce-accent);
+  border-radius: 8px;
+  background: var(--commerce-accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 750;
+  text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.store-menu-signup:hover {
+  border-color: var(--commerce-accent-dark);
+  background: var(--commerce-accent-dark);
+}
+
+.store-menu-signup:focus-visible {
+  outline: 3px solid #f4c996;
+  outline-offset: 3px;
+}
+
+.store-menu-auth-actions .store-menu-signin {
+  justify-content: center;
 }
 
 @keyframes store-menu-enter {

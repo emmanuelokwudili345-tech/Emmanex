@@ -139,6 +139,7 @@ export function CheckoutPage() {
 
   return (
     <>
+      <title>Checkout</title>
       <div className="store-header-shell">
         <SiteHeader />
       </div>

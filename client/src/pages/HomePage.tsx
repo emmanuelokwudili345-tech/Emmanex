@@ -222,6 +222,7 @@ export function HomePage() {
 
   return (
     <>
+      <title>Emmanex | Good things, chosen well</title>
       <div className="store-header-shell">
         <div className="announcement-bar">
           <span>Good finds. Good prices. Good everyday.</span>
@@ -685,7 +686,7 @@ export function HomePage() {
         <div className="footer-main">
           <Link className="wordmark" to="/" aria-label="Emmanex home">
             <span className="wordmark-mark">E</span>
-            <span>emmanex</span>
+            <span>Emmanex</span>
           </Link>
 
           <p>

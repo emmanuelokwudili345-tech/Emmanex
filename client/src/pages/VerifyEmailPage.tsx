@@ -117,6 +117,7 @@ export function VerifyEmailPage() {
 
   return (
     <>
+      <title>Verify Email</title>
       <SiteHeader />
 
       <main className="auth-layout">

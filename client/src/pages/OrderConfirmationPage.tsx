@@ -61,6 +61,7 @@ export function OrderConfirmationPage() {
 
   return (
     <>
+      <title>Review</title>
       <div className="store-header-shell">
         <SiteHeader />
       </div>

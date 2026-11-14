@@ -171,14 +171,16 @@ export function SiteHeader() {
             </div>
 
             <nav className="store-menu-links" aria-label="Store navigation">
-              <Link className="store-menu-notification" to="/notifications" onClick={closeMenu}>
-                <span className="store-menu-link-icon"><Bell size={20} /></span>
-                <span className="store-menu-link-copy">
-                  <strong>Notifications</strong>
-                  <small>Your order updates</small>
-                </span>
-                <ChevronRight size={17} aria-hidden="true" />
-              </Link>
+              {user && (
+                <Link className="store-menu-notification" to="/notifications" onClick={closeMenu}>
+                  <span className="store-menu-link-icon"><Bell size={20} /></span>
+                  <span className="store-menu-link-copy">
+                    <strong>Notifications</strong>
+                    <small>Your order updates</small>
+                  </span>
+                  <ChevronRight size={17} aria-hidden="true" />
+                </Link>
+              )}
               <Link to="/#categories" onClick={closeMenu}>
                 Shop by category
                 <ChevronRight size={17} aria-hidden="true" />
@@ -211,9 +213,14 @@ export function SiteHeader() {
                 Sign out
               </button>
             ) : (
-              <Link className="store-menu-signin" to="/login" onClick={closeMenu}>
-                Sign in to your account
-              </Link>
+              <div className="store-menu-auth-actions">
+                <Link className="store-menu-signup" to="/register" onClick={closeMenu}>
+                  Create account
+                </Link>
+                <Link className="store-menu-signin" to="/login" onClick={closeMenu}>
+                  Already have an account? Sign in
+                </Link>
+              </div>
             )}
           </aside>
         </div>
